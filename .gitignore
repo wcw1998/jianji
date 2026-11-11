@@ -1,0 +1,16 @@
+# 构建产物（本地生成，不入库）
+build/
+dist/
+
+# 内置嵌入式 Python（11MB 二进制，从 python.org 下载 embeddable zip 解包，见 README「从仓库构建」）
+runtime/
+
+# 运行产物 / 日志
+*.log
+jianyi-insights/
+
+# Python / IDE
+__pycache__/
+*.pyc
+.idea/
+.vscode/

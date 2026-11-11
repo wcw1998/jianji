@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鉴己 · 笔记洞察</title>
+<style>
+  :root{
+    --bg:#f7f6f3;
+    --panel:#ffffff;
+    --ink:#1c1b19;
+    --ink-2:#4a4741;
+    --ink-3:#8a857c;
+    --line:#e5e1da;
+    --line-2:#efebe4;
+    --accent:#b3541e;
+    --accent-soft:#fdf1e8;
+    --ok:#3f7d58;
+    --warn:#b45309;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 24px 64px}
+
+  /* header */
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}
+  h1{font-size:19px;margin:0 0 4px;font-weight:650;letter-spacing:.2px}
+  .sub{color:var(--ink-3);font-size:12.5px;margin:0}
+  .sub code{background:var(--line-2);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .tag{
+    display:inline-block;font-size:10.5px;font-weight:500;color:var(--ok);
+    background:#eef6f0;border:1px solid #cfe4d6;border-radius:20px;
+    padding:1px 8px;vertical-align:2px;margin-left:4px;letter-spacing:.2px;
+  }
+
+  .btn{
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;
+    font-family:inherit;transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{border-color:#cfc9bf;background:#fbfaf8}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+  .btn.primary:hover{background:#33302b}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--ink-3)}
+  .btn.ghost:hover{color:var(--ink);background:var(--line-2)}
+  .btn.small{padding:5px 10px;font-size:12px}
+
+  /* settings */
+  #settings{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:18px;display:none;
+  }
+  #settings.open{display:block}
+  .set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11.5px;color:var(--ink-3);letter-spacing:.3px}
+  .field input,.field select{
+    border:1px solid var(--line);background:#fdfdfc;border-radius:7px;padding:7px 9px;
+    font-size:13px;font-family:inherit;color:var(--ink);outline:none;width:100%;
+  }
+  .field input:focus,.field select:focus{border-color:#c9b9a8;background:#fff}
+  .hint{font-size:11.5px;color:var(--ink-3);margin-top:10px;line-height:1.6}
+  .hint b{color:var(--ink-2);font-weight:600}
+
+  /* modes */
+  .section-label{
+    font-size:11.5px;color:var(--ink-3);letter-spacing:.6px;text-transform:uppercase;
+    margin:0 0 10px;
+  }
+  .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+  .mode{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 13px;cursor:pointer;transition:.15s;position:relative;
+  }
+  .mode:hover{border-color:#d5cec4;transform:translateY(-1px)}
+  .mode.active{border-color:var(--ink);background:#fffdfa;box-shadow:0 2px 10px rgba(28,27,25,.05)}
+  .mode.active::after{
+    content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;
+    background:var(--accent);border-radius:2px;
+  }
+  .mode .name{font-weight:620;font-size:13.5px;display:flex;align-items:center;gap:6px}
+  .mode .desc{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .mode .badge{font-size:10px;color:var(--ink-3);border:1px solid var(--line);
+    border-radius:4px;padding:0 4px;font-weight:400}
+
+  /* main grid */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:16px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 16px;border-bottom:1px solid var(--line-2);background:#fbfaf8;
+  }
+  .card-head .t{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  .card-body{padding:0}
+  textarea{
+    width:100%;min-height:340px;border:none;outline:none;resize:vertical;
+    padding:15px 16px;font-size:13px;line-height:1.75;font-family:inherit;color:var(--ink);
+    background:transparent;display:block;
+  }
+  textarea::placeholder{color:#b3aca1}
+
+  .toolbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:10px 14px;border-top:1px solid var(--line-2);background:#fbfaf8;
+  }
+  .count{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+  .count.over{color:var(--warn)}
+
+  /* output */
+  #out{
+    padding:18px 20px;min-height:420px;max-height:72vh;overflow:auto;
+    font-size:13.5px;line-height:1.8;color:var(--ink-2);
+  }
+  #out h2{font-size:15px;margin:20px 0 8px;color:var(--ink);font-weight:650;
+    padding-bottom:5px;border-bottom:1px solid var(--line-2)}
+  #out h2:first-child{margin-top:0}
+  #out h3{font-size:13.5px;margin:16px 0 6px;color:var(--ink);font-weight:650}
+  #out p{margin:0 0 10px}
+  #out ul,#out ol{margin:0 0 10px;padding-left:20px}
+  #out li{margin:3px 0}
+  #out strong{color:var(--ink);font-weight:650}
+  #out blockquote{
+    margin:10px 0;padding:8px 12px;border-left:2px solid var(--accent);
+    background:var(--accent-soft);color:var(--ink-2);border-radius:0 6px 6px 0;
+  }
+  #out code{background:var(--line-2);padding:1px 5px;border-radius:4px;font-size:12px}
+  #out hr{border:none;border-top:1px solid var(--line-2);margin:16px 0}
+  #out sup.cite{
+    color:var(--accent);cursor:pointer;font-weight:600;font-size:10.5px;
+    margin:0 1px;padding:0 3px;border-radius:4px;background:var(--accent-soft);
+    vertical-align:super;line-height:1;user-select:none;
+  }
+  #out sup.cite:hover{background:#f6dfc8}
+  #out details.fnotes{margin:18px 0 0;border-top:1px dashed var(--line);padding-top:10px}
+  #out details.fnotes summary{cursor:pointer;font-size:12px;color:var(--ink-3)}
+  #out .fnote{
+    display:flex;gap:8px;padding:6px 9px;margin:4px 0;border-radius:6px;
+    font-size:12px;line-height:1.6;background:#fbfaf8;
+  }
+  #out .fnote .fn{color:var(--accent);font-weight:600;flex-shrink:0}
+  #out .fnote .fd{color:var(--ink-3);flex-shrink:0}
+  #out .fnote .ft{color:var(--ink-2);word-break:break-word}
+  #out .fnote.hl{background:var(--accent-soft);outline:1px solid #ecc7ab}
+  .placeholder{color:#b3aca1;font-size:13px;line-height:1.9}
+  .placeholder kbd{
+    background:var(--line-2);border-radius:4px;padding:1px 5px;font-size:11.5px;
+    font-family:inherit;color:var(--ink-2);
+  }
+  .err{color:#a13c2b;background:#fdf0ed;border:1px solid #f3d5cd;
+    padding:10px 12px;border-radius:8px;font-size:12.5px;margin:0 0 12px}
+  .cursor{display:inline-block;width:7px;height:14px;background:var(--accent);
+    vertical-align:-2px;animation:blink 1s steps(1) infinite;border-radius:1px}
+  @keyframes blink{50%{opacity:0}}
+
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+    background:var(--ink);color:#fff;font-size:12.5px;padding:8px 16px;border-radius:8px;
+    opacity:0;pointer-events:none;transition:.2s;z-index:99;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 洞察编辑器 */
+  #editorOverlay{
+    position:fixed;inset:0;background:rgba(28,27,25,.42);
+    display:none;align-items:center;justify-content:center;padding:24px;z-index:50;
+  }
+  #editorOverlay.open{display:flex}
+  .editor{
+    background:var(--panel);border-radius:14px;width:min(980px,100%);height:min(660px,92vh);
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.2);
+  }
+  .editor-head{display:flex;align-items:center;justify-content:space-between;
+    padding:13px 18px;border-bottom:1px solid var(--line-2)}
+  .editor-head .t{font-weight:650;font-size:14.5px}
+  .editor-body{flex:1;display:flex;min-height:0}
+  .editor-list{width:225px;border-right:1px solid var(--line-2);overflow:auto;
+    padding:10px;background:#fbfaf8;flex-shrink:0}
+  .editor-item{padding:9px 11px;border-radius:8px;cursor:pointer;font-size:13px;
+    margin-bottom:4px;display:flex;justify-content:space-between;gap:6px;align-items:center;color:var(--ink-2)}
+  .editor-item:hover{background:var(--line-2)}
+  .editor-item.active{background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:600}
+  .editor-item .meta{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  .editor-form{flex:1;display:flex;flex-direction:column;padding:14px 18px 10px;gap:9px;min-width:0;overflow:auto}
+  .editor-form label{font-size:11.5px;color:var(--ink-3);letter-spacing:.3px}
+  .editor-form input[type=text]{
+    border:1px solid var(--line);border-radius:7px;padding:7px 9px;
+    font-family:inherit;font-size:13px;outline:none;background:#fdfdfc;color:var(--ink);
+  }
+  .editor-form input[type=text]:focus,.editor-form textarea:focus{border-color:#c9b9a8}
+  .editor-form textarea{
+    border:1px solid var(--line);border-radius:7px;padding:10px;font-family:inherit;
+    font-size:12.5px;line-height:1.75;flex:1;resize:none;min-height:180px;outline:none;
+    background:#fdfdfc;color:var(--ink);
+  }
+  .editor-foot{display:flex;gap:8px;padding:11px 18px;border-top:1px solid var(--line-2);
+    background:#fbfaf8;align-items:center;flex-wrap:wrap}
+  .editor-foot .spacer{flex:1}
+  .editor-tip{font-size:11px;color:var(--ink-3);line-height:1.5;margin-top:2px}
+  .badge-edit{font-size:10px;color:var(--accent);border:1px solid #ecc7ab;
+    background:var(--accent-soft);border-radius:4px;padding:0 4px;font-weight:400}
+
+  @media (max-width:960px){
+    .grid{grid-template-columns:1fr}
+    .modes{grid-template-columns:repeat(2,1fr)}
+    .wrap{padding:20px 14px 48px}
+  }
+  @media (max-width:560px){
+    .modes{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>鉴己 · 笔记洞察 <span class="tag" id="proxyTag" style="display:none">本地代理已启用</span><span class="tag" id="desktopTag" style="display:none">桌面版</span></h1>
+      <p class="sub">自己的笔记 + 免费模型 = 那 6 个 AI 洞察。笔记不上传任何服务器，只发给你配置的模型接口。</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn small" id="btnEditor">调优洞察</button>
+      <button class="btn small" id="btnSettings">模型设置</button>
+      <button class="btn small" id="btnHelp">怎么用</button>
+    </div>
+  </header>
+
+  <!-- 设置 -->
+  <div id="settings">
+    <div class="set-grid">
+      <div class="field">
+        <label>服务商</label>
+        <select id="provider">
+          <option value="zhipu">智谱 GLM（有免费额度）</option>
+          <option value="siliconflow">硅基流动（有免费模型）</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="moonshot">Kimi / Moonshot</option>
+          <option value="ollama">本地 Ollama（完全免费）</option>
+          <option value="custom">自定义 OpenAI 兼容接口</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>模型名</label>
+        <input id="model" placeholder="glm-4-flash">
+      </div>
+      <div class="field" style="grid-column:span 2">
+        <label>接口地址（/chat/completions）</label>
+        <input id="apiBase" placeholder="https://open.bigmodel.cn/api/paas/v4/chat/completions">
+      </div>
+      <div class="field" style="grid-column:span 2">
+        <label>API Key（本地保存，可用 ollama 时留空）</label>
+        <input id="apiKey" type="password" placeholder="sk-...">
+      </div>
+      <div class="field">
+        <label>单次最多送入字数</label>
+        <input id="maxChars" type="number" value="18000" min="2000" step="1000">
+      </div>
+      <div class="field">
+        <label>Temperature</label>
+        <input id="temp" type="number" value="0.7" min="0" max="1.5" step="0.1">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>通用资料（所有洞察共用 · 每次都会带上，建议只放判定原则，别放长文）</label>
+        <textarea id="kbGlobal" rows="4" spellcheck="false"
+          style="border:1px solid var(--line);border-radius:7px;padding:9px;font-family:inherit;font-size:12.5px;line-height:1.7;outline:none;background:#fdfdfc;color:var(--ink);resize:vertical"
+          placeholder="留空则不带。点下面按钮可载入内置的《通用判定原则》"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+          <button class="btn small" id="btnKbGlobalLoad">载入内置通用原则</button>
+          <button class="btn small" id="btnKbGlobalClear">清空</button>
+          <span class="count" id="kbGlobalCount"></span>
+        </div>
+      </div>
+    </div>
+    <p class="hint">
+      <b>推荐组合：</b>智谱 <code>glm-4-flash</code>（免费、中文好）或硅基流动 <code>Qwen/Qwen2.5-7B-Instruct</code>（免费）。
+      <b>务必用 <code>start.bat</code> 打开本页</b>：国产模型接口不返回 CORS 头，直接双击 html 会被浏览器拦掉。start.bat 会起一个本地代理，请求先到本机再转出去，标题出现「本地代理已启用」就对了。
+      <b>Ollama</b> 需先 <code>ollama serve</code>，不需要 key，数据完全不出本机。
+    </p>
+  </div>
+
+  <p class="section-label">选择洞察</p>
+  <div class="modes" id="modes"></div>
+
+  <div class="grid">
+    <!-- 输入 -->
+    <div class="card">
+      <div class="card-head">
+        <span class="t">你的笔记</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="range" class="btn small" style="padding:5px 8px;font-family:inherit">
+            <option value="0">全部时间</option>
+            <option value="30">最近 30 天</option>
+            <option value="90" selected>最近 90 天</option>
+            <option value="180">最近 180 天</option>
+            <option value="365">最近 1 年</option>
+          </select>
+          <button class="btn small" id="btnUpload">导入导出文件</button>
+          <input type="file" id="file" accept=".csv,.html,.htm,.txt,.md" hidden>
+        </div>
+      </div>
+      <div class="card-body">
+        <textarea id="notes" placeholder="把笔记粘贴到这里，或点右上角「导入导出文件」直接传 flomo 导出的 CSV / HTML。
+
+格式建议每条笔记之间空一行。带日期更好，例如：
+2026-03-14
+今天又把那个决定往后推了一周，说是等信息更全..."></textarea>
+      </div>
+      <div class="toolbar">
+        <button class="btn small" id="btnSample">填入示例</button>
+        <button class="btn small" id="btnClear">清空</button>
+        <span class="count" id="count">0 字</span>
+      </div>
+    </div>
+
+    <!-- 输出 -->
+    <div class="card">
+      <div class="card-head">
+        <span class="t" id="outTitle">洞察结果</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn small" id="btnCopyPrompt" title="不调用 API，只把拼好的提示词复制走">复制 Prompt</button>
+          <button class="btn small" id="btnCopy">复制结果</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="out">
+          <p class="placeholder">
+            选一个洞察，把笔记贴到左边，然后点下面的「生成洞察」。<br><br>
+            不想配 API？点「复制 Prompt」，得到完整提示词，粘到任意 AI 里跑（<kbd>DeepSeek</kbd> <kbd>Kimi</kbd> <kbd>ChatGPT</kbd> 都行），一分钱不花。
+          </p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn primary" id="btnRun" style="flex:1;justify-content:center">生成洞察</button>
+        <button class="btn" id="btnStop" disabled>停止</button>
+        <span class="count" id="state"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="editorOverlay">
+  <div class="editor">
+    <div class="editor-head">
+      <span class="t">调优洞察 · 改提示词，立即生效</span>
+      <button class="btn small ghost" id="btnEdClose">关闭</button>
+    </div>
+    <div class="editor-body">
+      <div class="editor-list" id="editorList"></div>
+      <div class="editor-form">
+        <label>名称</label>
+        <input type="text" id="edName">
+        <label>一句话说明（显示在卡片上）</label>
+        <input type="text" id="edDesc">
+        <label>提示词（下面三条经验比任何技巧都重要）</label>
+        <textarea id="edPrompt" spellcheck="false" style="flex:1 1 auto;min-height:150px"></textarea>
+        <div class="editor-tip">
+          ① 强制引用原文+日期 —— 没证据的结论一律删掉；② 强制给反证 —— 不加这条 AI 会一路顺着你夸；
+          ③ 负面约束比正面要求有效 —— 写清「不要做什么」。改完点左下「保存修改」，主界面立即生效。
+        </div>
+
+        <label style="margin-top:6px">专业资料（本维度专用 · 拼在提示词之后作为判定标准）</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="edKBPack" class="btn small" style="padding:5px 8px;font-family:inherit;flex:1;min-width:0"></select>
+          <button class="btn small" id="btnEdKbLoad">载入</button>
+          <button class="btn small" id="btnEdKbImport">导入文件</button>
+          <button class="btn small" id="btnEdKbClear">清空</button>
+          <input type="file" id="edKbFile" accept=".md,.txt" hidden>
+        </div>
+        <textarea id="edKB" spellcheck="false" style="flex:0 0 auto;height:112px;min-height:80px"
+          placeholder="留空则不带。适合放：判定表 / 评分规则 / 2-3 个优质范例 / 反例黑名单。不要放整本书——长文会让模型划水。"></textarea>
+        <div class="count" id="edKbCount" style="align-self:flex-end;font-size:11px;color:var(--ink-3)"></div>
+      </div>
+    </div>
+    <div class="editor-foot">
+      <button class="btn small" id="btnEdNew">＋ 新增洞察</button>
+      <button class="btn small" id="btnEdReset">恢复默认</button>
+      <button class="btn small" id="btnEdDelete" style="color:#a13c2b">删除</button>
+      <span class="spacer"></span>
+      <button class="btn small" id="btnEdExport">导出配置</button>
+      <button class="btn small" id="btnEdImport">导入配置</button>
+      <button class="btn primary small" id="btnEdSave">保存修改</button>
+      <input type="file" id="edImportFile" accept=".json" hidden>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="knowledge.js"></script>
+<script>
+/* ============ 洞察定义 ============ */
+const COMMON = `你在分析一个人的私人笔记。这些笔记跨度很长、很碎、没有上下文。用户发给你时，每条笔记开头已标注编号 [n]。
+
+规则：
+1. 只根据笔记文本推断，不要脑补情节。
+2. 每个结论都必须用笔记编号引用证据，写在结论句末尾，格式为 [n]，可多个如 [2][5]。
+3. 正文里不要整段摘抄笔记原文；最多保留不超过 10 个字的关键短语（加引号）。
+4. 不要写"你是一个热爱思考的人""保持好奇心"这类正确的废话。
+5. 说不清的地方就说"这条线索太弱，不下结论"。
+6. 全程用第二人称"你"，语气像一个了解你的朋友，不是心理咨询师，也不是导师。
+7. 输出用 Markdown，不超过 800 字。宁可少说，不要说满。
+`;
+
+const MODES = [
+  {
+    id: 'insight',
+    name: '默认洞察',
+    by: '鉴己',
+    desc: '挖掘笔记背后隐藏的思维模式与深层内在矛盾',
+    prompt: `你是一个擅长从碎片笔记里读出"写字的人"的观察者。你读的不是内容，是习惯、停顿和反复。
+
+【任务】
+在我给你的笔记里，找出 3-5 个反复出现的思维模式。每个模式必须包含：
+1. 一句判断句命名（例：你在用忙碌回避一个更难的决定）
+2. 证据：用笔记编号引用，如 [3][7]，2-3 条
+3. 它在保护你什么
+4. 它让你付出了什么
+
+【最后】
+指出笔记里最大的一个内在矛盾：两个同时成立、但互相拉扯的诉求。用一句话说清，不要解释。
+
+【禁止】
+不要总结笔记的主题分布，不要给行动建议，不要重复讲道理。同一个意思只说一遍。
+如果某个模式只有一条证据，标注"样本不足"。`
+  },
+  {
+    id: 'value',
+    name: '价值澄清',
+    by: '@shaonan',
+    desc: '从笔记里找出你真正看重的东西，从混乱回到清晰',
+    prompt: `你不听一个人说自己重视什么，你看他在什么事情上不计成本地花时间、在什么事上会生气、在什么时刻反复回头写同一件事。
+
+【任务】
+从笔记中提炼 3-5 条"你真正在意的价值"。每条给：
+1. 价值名（用一个具体的词，不要用"成长""自由"这种大词，除非笔记里就是这么写的）
+2. 证据：用笔记编号引用 [n]，至少 2 条
+3. 这条价值在你实际生活里的排序（第几位，凭什么排这里）
+4. 冲突：它和你"嘴上说的优先级"是否矛盾
+
+【最后】
+给出一个追问：如果只能保留三件事，你会删掉哪些？把这句话留给我自己填，不要替我回答。
+
+【禁止】
+不要输出价值观清单式的鸡汤，不要把"在意"和"应该在意"混为一谈。`
+  },
+  {
+    id: 'invert',
+    name: '逆向思考',
+    by: '鉴己',
+    desc: '通过芒格的逆向思维来考察笔记中的关键目标',
+    prompt: `芒格的逆向思维：不要问"怎么才能成功"，要问"什么会让我彻底失败，然后避开它"。大多数人死于愚蠢，不是死于不够聪明。
+
+【任务】
+第一步：从笔记中识别 2-3 个真实目标。
+注意——不是笔记里"写出来的目标"，而是行为指向的目标（时间和情绪花在哪里，目标就在哪里）。
+
+第二步：对每个目标，列出 5 个最可能让它失败的原因。要求：从笔记里找已经出现的早期信号，不是通用风险清单。
+
+第三步：对每个目标给出：
+1. 哪个失败信号已经出现（用笔记编号引用）
+2. 哪个还没出现（这是你目前的安全边际）
+3. 一个"避免愚蠢"的动作——注意是避免愚蠢，不是追求聪明
+
+【禁止】
+不要给"提升效率""坚持复盘"这类建议。一个建议如果换个人也成立，就说明它没用。`
+  },
+  {
+    id: 'second',
+    name: '二阶思考',
+    by: '@shaonan',
+    desc: '从笔记中识别出问题，并提炼出问题之上的问题',
+    prompt: `一阶思考是"我该怎么办"。二阶思考是"我为什么会问这个问题"。
+大多数反复出现的问题，都不是问题本身，是上游某个东西的投影。
+
+【任务】
+从笔记中识别 3 个我最近在反复纠结的问题（一阶问题，表面问题）。每个给：
+1. 一阶问题：用笔记编号引用，如 [4]
+2. 二阶问题：这个问题之所以难，真正卡住我的是什么
+3. 三阶推演：如果二阶问题解决了，我会面对什么新的问题（很多人到这里就不想解决它了）
+4. 判断：这是"待解决的问题"，还是"我一直在供养的问题"（靠反复想它获得某种安慰）
+
+【最后】
+把所有一阶问题往上归并：它们有没有共同的源头？用一句话说。
+
+【禁止】
+不要把我纠结的每一件小事都上升成哲学问题。有的问题就是小事，直说。`
+  },
+  {
+    id: 'cbt',
+    name: 'CBT 疗法',
+    by: '鉴己',
+    desc: '识别笔记中的思维陷阱并提供具体的改善建议',
+    prompt: `你熟悉认知行为疗法（CBT）里的认知扭曲类型：非黑即白、过度概括、心理过滤、否定正面、读心术、灾难化、情绪化推理、应该式陈述、贴标签、个人化、比较思维。
+
+【任务】
+在笔记里找出 3-5 处认知扭曲。每处按这个结构写：
+1. 编号引用，如 [2]
+2. 扭曲类型：中文名 + 英文名
+3. 反证：笔记里有没有与这句话矛盾的事实？——优先用我自己写过的其他笔记（编号引用）来反驳，这比我听别人讲道理有效
+4. 一个重构句式：把原句改写成一句更准确的表述。例："我总是搞砸" → "这周三件事我搞砸了两件，周四那次我做对了"
+
+【最后】
+如果只能改一句话，改哪一句？为什么是这一句？
+
+【免责声明】
+在结尾加一行：这不是心理治疗。如果这种低落状态持续两周以上，请找专业人士。（这行必须保留，不要美化它）`
+  },
+  {
+    id: 'mbti',
+    name: 'MBTI 分析',
+    by: '鉴己',
+    desc: '从你的笔记内容中解读真实的 MBTI 人格类型',
+    prompt: `MBTI 的价值不在四个字母，在于它描述了你获取信息和做决定时的默认路径。
+不要从"我以为我是什么型"出发，从笔记里的判断方式推断。
+
+【任务】
+逐维度分析，每个维度包含：
+1. 维度：E/I、S/N、T/F、J/P
+2. 支持证据：用笔记编号引用，至少 2 条（写的是判断方式，不是自我描述）
+3. 反证据：有没有相反的证据
+4. 倾向强度：弱 / 中 / 强
+5. 一句话解释这个维度在你的笔记里怎么体现
+
+【最后】
+1. 四字母结论 + 置信度（低/中/高）
+2. 最可能的误判点：例如"你以为自己是 I，其实只是长期社交耗竭的 E"
+3. 这个类型在压力下的"劣势功能失控"表现，在你的笔记里有没有出现
+
+【禁止】
+不要生肖星座式的性格夸赞。每个维度都必须有反面可能。如果某个维度证据不足，直接写"该维度证据不足，不给结论"。`
+  }
+];
+
+const PRESETS = {
+  zhipu:       { base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4-flash' },
+  siliconflow: { base:'https://api.siliconflow.cn/v1/chat/completions',        model:'Qwen/Qwen2.5-7B-Instruct' },
+  deepseek:    { base:'https://api.deepseek.com/chat/completions',             model:'deepseek-chat' },
+  moonshot:    { base:'https://api.moonshot.cn/v1/chat/completions',           model:'moonshot-v1-8k' },
+  ollama:      { base:'http://localhost:11434/v1/chat/completions',            model:'qwen2.5:7b' },
+  custom:      { base:'', model:'' }
+};
+
+/* ============ 元素 ============ */
+const $ = id => document.getElementById(id);
+const elNotes = $('notes'), elOut = $('out'), elCount = $('count'), elState = $('state');
+
+let currentMode = MODES[0].id;
+let parsedMemos = [];   // {content, date}
+let abortCtrl = null;
+let rawMarkdown = '';
+
+/* ============ 模式存储：默认 + 调优覆盖 + 自定义 ============ */
+const MKEY = 'jianyi_insight_modes_v1';
+let modeStore = { overrides: {}, extras: [], kb: {} };
+try {
+  const saved = JSON.parse(localStorage.getItem(MKEY) || '{}');
+  modeStore.overrides = saved.overrides || {};
+  modeStore.extras = Array.isArray(saved.extras) ? saved.extras : [];
+  modeStore.kb = saved.kb || {};
+} catch(e){}
+function saveModeStore(){ localStorage.setItem(MKEY, JSON.stringify(modeStore)); }
+
+function allModes(){
+  const base = MODES.map(m =>
+    modeStore.overrides[m.id] ? Object.assign({}, m, modeStore.overrides[m.id], { edited: true }) : m
+  );
+  return base.concat(modeStore.extras.map(m => Object.assign({ custom: true }, m)));
+}
+function findMode(id){ return allModes().find(m => m.id === id); }
+
+/* ============ 渲染模式卡 ============ */
+function renderModes(){
+  $('modes').innerHTML = allModes().map(m => {
+    const badge = m.custom
+      ? '<span class="badge">自定义</span>'
+      : m.edited
+        ? '<span class="badge badge-edit">已调优</span>'
+        : '<span class="badge">by ' + m.by + '</span>';
+    return `<div class="mode${m.id===currentMode?' active':''}" data-id="${m.id}">
+      <div class="name">${escapeHtml(m.name)}${badge}</div>
+      <div class="desc">${escapeHtml(m.desc || '')}</div>
+    </div>`;
+  }).join('');
+}
+renderModes();
+
+$('modes').addEventListener('click', e => {
+  const card = e.target.closest('.mode');
+  if (!card) return;
+  currentMode = card.dataset.id;
+  document.querySelectorAll('.mode').forEach(c => c.classList.toggle('active', c.dataset.id === currentMode));
+  const m = findMode(currentMode);
+  $('outTitle').textContent = m.name;
+});
+
+/* ============ 设置持久化 ============ */
+const SKEY = 'jianyi_insight_cfg_v1';
+/* 旧版 localStorage key 一次性迁移（调优/模型配置不丢）；旧 key 名含 flomo 字样属历史存储键，非界面展示 */
+[['flomo_insight_modes_v1','jianyi_insight_modes_v1'],['flomo_insight_cfg_v1','jianyi_insight_cfg_v1']].forEach(([o,n]) => {
+  if (localStorage.getItem(o) && !localStorage.getItem(n)) localStorage.setItem(n, localStorage.getItem(o));
+});
+function loadCfg(){
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem(SKEY) || '{}'); } catch(e){}
+  $('provider').value = cfg.provider || 'zhipu';
+  const p = PRESETS[$('provider').value];
+  $('apiBase').value = cfg.apiBase || p.base;
+  $('model').value   = cfg.model   || p.model;
+  $('apiKey').value  = cfg.apiKey  || '';
+  $('maxChars').value= cfg.maxChars|| 18000;
+  $('temp').value    = cfg.temp    || 0.7;
+  $('kbGlobal').value = cfg.kbGlobal || '';
+  updateKbCounts();
+}
+function saveCfg(){
+  localStorage.setItem(SKEY, JSON.stringify({
+    provider: $('provider').value,
+    apiBase: $('apiBase').value.trim(),
+    model: $('model').value.trim(),
+    apiKey: $('apiKey').value.trim(),
+    maxChars: +$('maxChars').value || 18000,
+    temp: +$('temp').value || 0.7,
+    kbGlobal: $('kbGlobal').value
+  }));
+}
+$('provider').addEventListener('change', () => {
+  const p = PRESETS[$('provider').value];
+  if (p.base) $('apiBase').value = p.base;
+  if (p.model) $('model').value = p.model;
+  saveCfg();
+});
+['apiBase','model','apiKey','maxChars','temp'].forEach(id => $(id).addEventListener('change', saveCfg));
+loadCfg();
+
+/* ============ 检测本地代理（server.py / app.py / main.py） ============ */
+let PROXY_PORT = +((location.search.match(/[?&]p=(\d+)/)||[])[1] || 0);  // 0 = 需自动探测
+let USE_PROXY = false;
+function proxyBase(){
+  // 同源（http/https 页面）直接走相对路径；file:// 走 127.0.0.1:PORT
+  if (/^https?:$/.test(location.protocol)) return '';
+  return 'http://127.0.0.1:' + PROXY_PORT;
+}
+(async () => {
+  if (window.jianyi_desktop) $('desktopTag').style.display = 'inline-block';
+  async function ping(port){
+    const r = await fetch('http://127.0.0.1:' + port + '/__proxy_ping', { cache:'no-store' });
+    const j = await r.json();
+    return !!(j && j.ok);
+  }
+  try {
+    if (PROXY_PORT){
+      // 指定了端口，直接验证
+      if (await ping(PROXY_PORT)){ USE_PROXY = true; $('proxyTag').style.display='inline-block'; }
+    } else {
+      // 自动探测 8000-8019（桌面版/ start.bat 都可能用）
+      for (let p = 8000; p <= 8019; p++){
+        if (await ping(p)){ PROXY_PORT = p; USE_PROXY = true; $('proxyTag').style.display='inline-block'; break; }
+      }
+    }
+  } catch(e){ /* 没有代理就走直连 */ }
+})();
+
+$('btnSettings').addEventListener('click', () => $('settings').classList.toggle('open'));
+$('btnHelp').addEventListener('click', () => {
+  toast('导出：flomo 网页版 → 设置 → 导出 → HTML/CSV；然后点「导入导出文件」');
+});
+
+/* ============ 字数统计 ============ */
+function updateCount(){
+  const n = elNotes.value.length;
+  const max = +$('maxChars').value || 18000;
+  elCount.textContent = n.toLocaleString() + ' 字';
+  elCount.classList.toggle('over', n > max);
+}
+elNotes.addEventListener('input', () => { parsedMemos = []; updateCount(); });
+updateCount();
+
+/* ============ 资料字数与通用资料 ============ */
+function updateKbCounts(){
+  const g = $('kbGlobal').value.length;
+  $('kbGlobalCount').textContent = g ? g.toLocaleString() + ' 字' : '';
+  if ($('edKbCount')){
+    const k = $('edKB').value.length;
+    $('edKbCount').textContent = k ? k.toLocaleString() + ' 字（建议 ≤ 3000，太长会稀释注意力）' : '';
+  }
+}
+$('kbGlobal').addEventListener('input', () => { saveCfg(); updateKbCounts(); });
+$('btnKbGlobalLoad').addEventListener('click', () => {
+  const p = (window.KNOWLEDGE_PACKS || {}).global;
+  if (!p){ toast('没找到 knowledge.js，先运行 build_knowledge.py'); return; }
+  $('kbGlobal').value = p.text;
+  saveCfg(); updateKbCounts();
+  toast('已载入「' + p.name + '」');
+});
+$('btnKbGlobalClear').addEventListener('click', () => {
+  $('kbGlobal').value = '';
+  saveCfg(); updateKbCounts();
+});
+
+/* ============ 文件导入 ============ */
+$('btnUpload').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const text = await f.text();
+  let memos = [];
+  if (/\.(csv)$/i.test(f.name)) memos = parseCSV(text);
+  else if (/\.(html?)$/i.test(f.name)) memos = parseHTML(text);
+  else memos = parsePlain(text);
+
+  if (!memos.length) { toast('没解析出笔记，试试直接粘贴文本'); return; }
+  parsedMemos = memos;
+  applyRange();
+  toast('已导入 ' + memos.length + ' 条笔记');
+  e.target.value = '';
+});
+
+$('range').addEventListener('change', () => { if (parsedMemos.length) applyRange(); });
+
+function applyRange(){
+  const days = +$('range').value;
+  let list = parsedMemos;
+  if (days > 0) {
+    const cut = Date.now() - days * 86400000;
+    const filtered = list.filter(m => {
+      if (!m.date) return true;
+      const t = new Date(m.date.replace(/-/g, '/')).getTime();
+      return isNaN(t) ? true : t >= cut;
+    });
+    if (filtered.length) list = filtered;
+    else { toast('该时间段内没有笔记，已显示全部'); }
+  }
+  elNotes.value = list.map(m => m.date ? `${m.date}\n${m.content}` : m.content).join('\n\n');
+  updateCount();
+}
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], cell = '', q = false;
+  const s = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (q){
+      if (c === '"' && s[i+1] === '"') { cell += '"'; i++; }
+      else if (c === '"') q = false;
+      else cell += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (c === '\r') {}
+      else cell += c;
+    }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  if (rows.length < 2) return [];
+
+  const head = rows[0].map(h => h.toLowerCase());
+  const find = keys => head.findIndex(h => keys.some(k => h.includes(k)));
+  let ci = find(['内容','content','memo','笔记']);
+  let di = find(['时间','time','date','日期']);
+  let ti = find(['标签','tag']);
+  if (ci < 0) ci = 0;
+  return rows.slice(1)
+    .map(r => ({ content: (r[ci]||'').trim(), date: di>=0 ? (r[di]||'').trim() : '',
+                 tags: ti>=0 ? (r[ti]||'').trim() : '' }))
+    .filter(m => m.content)
+    .map(m => m.tags ? { ...m, content: m.content + ' ' + m.tags } : m);
+}
+
+function parseHTML(text){
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  const out = [];
+  const nodes = doc.querySelectorAll('.memo, .note, article');
+  const list = nodes.length ? nodes : doc.querySelectorAll('div');
+  list.forEach(el => {
+    const c = el.querySelector('.content, .memo-content, .richText, p');
+    const t = el.querySelector('.time, .date, .memo-time');
+    const content = (c ? c.innerText : '').trim() || (el.classList.contains('memo') ? el.innerText.trim() : '');
+    if (content && content.length > 3) out.push({ content, date: t ? t.innerText.trim() : '' });
+  });
+  if (out.length) return out;
+  const body = (doc.body.innerText || '').trim();
+  return body ? parsePlain(body) : [];
+}
+
+function parsePlain(text){
+  return text.split(/\n\s*\n/)
+    .map(b => b.trim()).filter(Boolean)
+    .map(b => {
+      const m = b.match(/^(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^\n]*)\n([\s\S]+)$/);
+      return m ? { date: m[1].trim(), content: m[2].trim() } : { date:'', content:b };
+    });
+}
+
+/* ============ 组装 prompt ============ */
+function cap(s, n){
+  return s.length > n ? s.slice(0, n) + '\n…（资料过长，已截断）' : s;
+}
+
+let currentNotes = [];  // 编号后的笔记，供引用渲染用
+
+function buildNumberedNotes(raw){
+  const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  currentNotes = blocks.map((b, i) => {
+    const m = b.match(/^(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^\n]*)\n([\s\S]+)$/);
+    return m ? { n: i + 1, date: m[1].trim(), text: m[2].trim() }
+             : { n: i + 1, date: '', text: b };
+  });
+  return blocks.map((b, i) => '[' + (i + 1) + '] ' + b).join('\n\n');
+}
+
+function buildMessages(){
+  const mode = findMode(currentMode);
+  const notes = elNotes.value.trim();
+  if (!notes) return null;
+
+  const g = ($('kbGlobal').value || '').trim();
+  const k = ((modeStore.kb || {})[mode.id] || '').trim();
+
+  let sys = COMMON;
+  if (g) sys += '\n\n【通用判定原则 · 优先级高于你的通用知识】\n' + cap(g, 5000);
+  sys += '\n\n' + mode.prompt;
+  if (k) sys += '\n\n【本维度专业资料 · 判定标准以本段为准，不要引用资料中没有的术语】\n' + cap(k, 6000);
+
+  const numbered = buildNumberedNotes(notes);
+  const user = '以下是我的笔记，每条开头已标注编号 [n]，分析中引用证据一律使用编号：\n\n---\n' + numbered + '\n---\n\n请按要求输出「' + mode.name + '」的分析。';
+  return [{ role:'system', content: sys }, { role:'user', content: user }];
+}
+
+/* ============ 复制 Prompt ============ */
+$('btnCopyPrompt').addEventListener('click', async () => {
+  const msgs = buildMessages();
+  if (!msgs) { toast('先贴点笔记进来'); return; }
+  const m = findMode(currentMode);
+  const txt = `【系统指令】\n${msgs[0].content}\n\n【我的笔记】\n${elNotes.value.trim()}\n\n请输出「${m.name}」分析。`;
+  await copy(txt);
+  toast('提示词已复制，粘到任意 AI 里就能跑');
+});
+
+/* ============ 运行 ============ */
+$('btnRun').addEventListener('click', run);
+$('btnStop').addEventListener('click', () => { if (abortCtrl) abortCtrl.abort(); });
+
+async function run(){
+  const msgs = buildMessages();
+  if (!msgs) { toast('先贴点笔记进来'); return; }
+
+  let base = $('apiBase').value.trim();
+  const key = $('apiKey').value.trim();
+  const model = $('model').value.trim();
+  if (!base) { $('settings').classList.add('open'); toast('先在「模型设置」里填接口地址'); return; }
+  if (!model) { $('settings').classList.add('open'); toast('填一下模型名'); return; }
+  if (!key && !/localhost|127\.0\.0\.1/.test(base)) {
+    $('settings').classList.add('open'); toast('需要 API Key（本地 Ollama 不需要）'); return;
+  }
+
+  rawMarkdown = '';
+  elOut.innerHTML = '<p class="placeholder">正在读你的笔记…<span class="cursor"></span></p>';
+  $('btnRun').disabled = true; $('btnStop').disabled = false;
+  elState.textContent = '生成中';
+  abortCtrl = new AbortController();
+  const t0 = Date.now();
+
+  try {
+    const headers = { 'Content-Type':'application/json' };
+    let url = base;
+    if (USE_PROXY){
+      url = proxyBase() + '/__proxy';
+      headers['X-Target-URL'] = base;
+      if (key) headers['X-Target-Auth'] = 'Bearer ' + key;
+    } else if (key){
+      headers['Authorization'] = 'Bearer ' + key;
+    }
+
+    const res = await fetch(url, {
+      method:'POST',
+      headers,
+      signal: abortCtrl.signal,
+      body: JSON.stringify({
+        model,
+        messages: msgs,
+        temperature: +$('temp').value || 0.7,
+        stream: true
+      })
+    });
+
+    if (!res.ok){
+      const t = await res.text();
+      throw new Error('HTTP ' + res.status + ' · ' + t.slice(0, 300));
+    }
+
+    if (!res.body || !res.headers.get('content-type')?.includes('event-stream')){
+      // 非流式回退
+      const j = await res.json();
+      rawMarkdown = j.choices?.[0]?.message?.content || '(空响应)';
+      render(rawMarkdown);
+    } else {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true){
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream:true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines){
+          const s = line.trim();
+          if (!s.startsWith('data:')) continue;
+          const d = s.slice(5).trim();
+          if (d === '[DONE]') continue;
+          try {
+            const j = JSON.parse(d);
+            const delta = j.choices?.[0]?.delta?.content || '';
+            if (delta){ rawMarkdown += delta; render(rawMarkdown, true); }
+          } catch(e){}
+        }
+      }
+      render(rawMarkdown);
+    }
+    elState.textContent = '完成 · ' + ((Date.now()-t0)/1000).toFixed(1) + 's';
+  } catch(err){
+    if (err.name === 'AbortError'){
+      elState.textContent = '已停止';
+      if (rawMarkdown) render(rawMarkdown); else elOut.innerHTML = '<p class="placeholder">已停止。</p>';
+    } else {
+      const isNet = /Failed to fetch|NetworkError|Load failed/i.test(err.message);
+      let tip;
+      if (isNet && !USE_PROXY){
+        tip = '多数国产大模型接口（含智谱）不返回 CORS 响应头，浏览器直连一定会被拦。<br><b>解决：关掉这个页面，双击同目录的 <code>start.bat</code></b>，它会启动本地代理并自动打开 http://localhost:8000 —— 页面标题出现「本地代理已启用」就说明通了。';
+      } else if (isNet && USE_PROXY){
+        tip = '本地代理在，但没能连上模型接口。检查：接口地址是否完整（一般以 <code>/chat/completions</code> 结尾）、本机网络是否正常。';
+      } else {
+        tip = '检查：接口地址是否以 <code>/chat/completions</code> 结尾、API Key 是否正确（有没有多余空格或换行）、模型名是否已开通。';
+      }
+      elOut.innerHTML = `<p class="err"><b>请求失败：</b>${escapeHtml(err.message)}<br><br>${tip}</p>`;
+      elState.textContent = '出错';
+    }
+  } finally {
+    $('btnRun').disabled = false; $('btnStop').disabled = true;
+    abortCtrl = null;
+  }
+}
+
+/* ============ 极简 markdown 渲染 ============ */
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function mdToHtml(md){
+  const out = [];
+  let list = null;
+  let para = [];
+  const inl = s => inline(escapeHtml(s));
+  const flushPara = () => {
+    if (para.length){ out.push('<p>' + inl(para.join(' ')) + '</p>'); para = []; }
+  };
+  const flushList = () => {
+    if (list){
+      out.push('<' + list.type + '>' +
+        list.items.map(i => '<li>' + inl(i) + '</li>').join('') +
+        '</' + list.type + '>');
+      list = null;
+    }
+  };
+
+  md.split('\n').forEach(raw => {
+    const line = raw.replace(/\s+$/, '');
+    if (!line.trim()){ flushPara(); flushList(); return; }
+
+    const hm = line.match(/^\s{0,3}(#{1,4})\s+(.*)$/);
+    if (hm){
+      flushPara(); flushList();
+      const tag = hm[1].length <= 2 ? 'h2' : 'h3';
+      out.push('<' + tag + '>' + inl(hm[2].replace(/\s*#+$/, '')) + '</' + tag + '>');
+      return;
+    }
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)){
+      flushPara(); flushList(); out.push('<hr>'); return;
+    }
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    if (ul){
+      flushPara();
+      if (!list || list.type !== 'ul'){ flushList(); list = { type:'ul', items:[] }; }
+      list.items.push(ul[1]); return;
+    }
+    const ol = line.match(/^\s*\d+[.)、]\s*(.*)$/);
+    if (ol){
+      flushPara();
+      if (!list || list.type !== 'ol'){ flushList(); list = { type:'ol', items:[] }; }
+      list.items.push(ol[1]); return;
+    }
+    const bq = line.match(/^\s*>\s?(.*)$/);
+    if (bq){
+      flushPara(); flushList();
+      out.push('<blockquote>' + inl(bq[1]) + '</blockquote>'); return;
+    }
+    flushList();
+    para.push(line.trim());
+  });
+
+  flushPara(); flushList();
+  return out.join('');
+}
+function inline(s){
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+/* ============ 引用渲染：[n] → 上标 + 脚注 ============ */
+let lastCited = [];
+
+function escapeAttr(s){
+  return escapeHtml(s).replace(/"/g, '&quot;');
+}
+function renderCitations(html){
+  if (!currentNotes.length) return html;
+  return html.replace(/\[(\d{1,3})\]/g, (all, n) => {
+    const note = currentNotes[+n - 1];
+    if (!note) return all;
+    const tip = (note.date ? note.date + '\n' : '') + note.text.slice(0, 160);
+    return '<sup class="cite" data-n="' + n + '" title="' + escapeAttr(tip) + '">' + n + '</sup>';
+  });
+}
+function collectCited(md){
+  const set = new Set();
+  (md.match(/\[(\d{1,3})\]/g) || []).forEach(x => {
+    const n = +x.slice(1, -1);
+    if (n >= 1 && n <= currentNotes.length) set.add(n);
+  });
+  return [...set].sort((a, b) => a - b);
+}
+function footnotesHtml(cited){
+  if (!cited.length || !currentNotes.length) return '';
+  const items = cited.map(n => {
+    const note = currentNotes[n - 1];
+    if (!note) return '';
+    return '<div class="fnote" data-n="' + n + '"><span class="fn">[' + n + ']</span>' +
+      (note.date ? '<span class="fd">' + escapeHtml(note.date) + '</span>' : '') +
+      '<span class="ft">' + escapeHtml(note.text) + '</span></div>';
+  }).join('');
+  return '<details class="fnotes"><summary>引用的笔记（' + cited.length + ' 条 · 点编号跳转）</summary>' + items + '</details>';
+}
+
+function render(md, streaming){
+  let html = renderCitations(mdToHtml(md));
+  lastCited = collectCited(md);
+  html += footnotesHtml(lastCited);
+  elOut.innerHTML = html + (streaming ? '<span class="cursor"></span>' : '');
+  if (streaming) elOut.scrollTop = elOut.scrollHeight;
+}
+
+elOut.addEventListener('click', e => {
+  const c = e.target.closest('sup.cite');
+  if (!c) return;
+  const det = elOut.querySelector('details.fnotes');
+  if (!det) return;
+  det.open = true;
+  const item = det.querySelector('.fnote[data-n="' + c.dataset.n + '"]');
+  if (item){
+    det.querySelectorAll('.fnote').forEach(x => x.classList.remove('hl'));
+    item.classList.add('hl');
+    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    setTimeout(() => item.classList.remove('hl'), 2000);
+  }
+});
+
+/* ============ 工具 ============ */
+function copyText(){
+  const cited = collectCited(rawMarkdown);
+  if (!cited.length || !currentNotes.length) return rawMarkdown;
+  return rawMarkdown + '\n\n---\n\n引用笔记：\n' + cited.map(n => {
+    const note = currentNotes[n - 1];
+    if (!note) return '';
+    return '[' + n + '] ' + (note.date ? note.date + '\n' : '') + note.text;
+  }).filter(Boolean).join('\n\n');
+}
+$('btnCopy').addEventListener('click', async () => {
+  if (!rawMarkdown) { toast('还没有结果'); return; }
+  await copy(copyText());
+  toast('结果已复制（含引用笔记清单）');
+});
+$('btnClear').addEventListener('click', () => {
+  elNotes.value = ''; parsedMemos = []; rawMarkdown = '';
+  elOut.innerHTML = '<p class="placeholder">已清空。</p>';
+  elState.textContent = ''; updateCount();
+});
+async function copy(t){
+  try { await navigator.clipboard.writeText(t); }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
+}
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ============ 示例数据 ============ */
+const SAMPLE = `2026-08-03
+今天又把那个决定往后推了一周，说是等信息更全，其实我知道信息已经够了。就是不敢。
+
+2026-08-09
+会议开到七点，回家路上一直在想那个需求到底谁在买单。回到工位发现自己又主动接了新活，明明手上三个没结。
+
+2026-08-14
+同事说我最近像换了个人。我说没有，只是懒得解释了。
+
+2026-08-21
+晚上十点还在改那份没人看的文档。改的是措辞，第三遍。改完感觉自己今天没白过。
+
+2026-08-28
+我妈打电话问什么时候回家。我说等忙完这阵。这句话我今年说了六次。
+
+2026-09-02
+想清楚一件事：我不是怕失败，我是怕承认这个方向本身就不值得。这样前面两年就白费了。
+
+2026-09-07
+今天下午在楼下坐了二十分钟，什么也没干。回来竟然有点内疚。
+
+2026-09-15
+又看到一个同龄人创业的消息。第一反应是替自己找理由：他有资源。然后觉得自己很丑。
+
+2026-09-22
+其实我最想做的事一直没变，只是每次说出口都觉得不切实际，所以改成说"以后再看"。
+
+2026-10-02
+假期第二天，终于把那个决定写下来了。写完之后没有想象中轻松，只是觉得，这事终于从脑子里搬到纸上了。`;
+$('btnSample').addEventListener('click', () => {
+  elNotes.value = SAMPLE; parsedMemos = parsePlain(SAMPLE); updateCount();
+  toast('已填入示例笔记（10 条，虚构）');
+});
+
+/* ============ 洞察编辑器 ============ */
+const NEW_PROMPT_SKELETON = `【角色】用一句话描述你要它扮演谁。
+
+【任务】
+1. 第一件事（必须引用原文+日期）
+2. 第二件事
+3. 第三件事
+
+【最后】
+收尾要求，比如：用一句话指出所有线索的共同点。
+
+【禁止】
+不要总结笔记主题；不要给行动建议；证据不足就说"线索太弱"。`;
+
+let editingId = null;
+
+function openEditor(){
+  $('editorOverlay').classList.add('open');
+  renderEditorList();
+}
+function renderEditorList(){
+  const modes = allModes();
+  if (!editingId || !modes.some(m => m.id === editingId)) editingId = modes[0].id;
+  $('editorList').innerHTML = modes.map(m => `
+    <div class="editor-item${m.id===editingId?' active':''}" data-id="${m.id}">
+      <span>${escapeHtml(m.name)}</span>
+      <span class="meta">${m.custom ? '自定义' : m.edited ? '已调优' : '默认'}</span>
+    </div>`).join('');
+  loadEditorForm();
+}
+function loadEditorForm(){
+  const m = findMode(editingId);
+  if (!m) return;
+  $('edName').value = m.name;
+  $('edDesc').value = m.desc || '';
+  $('edPrompt').value = m.prompt || '';
+  $('btnEdDelete').style.display = m.custom ? '' : 'none';
+  $('btnEdReset').style.display = (!m.custom && m.edited) ? '' : 'none';
+  $('edKB').value = (modeStore.kb || {})[m.id] || '';
+  fillPackOptions(m.id);
+  updateKbCounts();
+}
+
+function fillPackOptions(modeId){
+  const packs = window.KNOWLEDGE_PACKS || {};
+  const opts = ['<option value="">选择内置资料包…</option>'];
+  Object.keys(packs).forEach(k => {
+    opts.push('<option value="' + k + '">' + escapeHtml(packs[k].name) + '</option>');
+  });
+  $('edKBPack').innerHTML = opts.join('');
+  if (packs[modeId]) $('edKBPack').value = modeId;
+}
+
+$('btnEditor').addEventListener('click', openEditor);
+$('btnEdClose').addEventListener('click', () => $('editorOverlay').classList.remove('open'));
+$('editorOverlay').addEventListener('click', e => {
+  if (e.target === $('editorOverlay')) $('editorOverlay').classList.remove('open');
+});
+$('editorList').addEventListener('click', e => {
+  const it = e.target.closest('.editor-item');
+  if (!it) return;
+  editingId = it.dataset.id;
+  renderEditorList();
+});
+
+$('btnEdSave').addEventListener('click', () => {
+  const name = $('edName').value.trim();
+  const desc = $('edDesc').value.trim();
+  const prompt = $('edPrompt').value.trim();
+  if (!name || !prompt) { toast('名称和提示词都不能为空'); return; }
+  const m = findMode(editingId);
+  if (!m) return;
+  if (m.custom){
+    const i = modeStore.extras.findIndex(x => x.id === editingId);
+    modeStore.extras[i] = { id: editingId, name, desc, prompt };
+  } else {
+    modeStore.overrides[editingId] = { name, desc, prompt };
+  }
+  modeStore.kb = modeStore.kb || {};
+  const kbText = $('edKB').value.trim();
+  if (kbText) modeStore.kb[editingId] = kbText;
+  else delete modeStore.kb[editingId];
+  saveModeStore();
+  renderModes();
+  renderEditorList();
+  toast('已保存，主界面立即生效');
+});
+
+/* ---- 本维度资料 ---- */
+$('btnEdKbLoad').addEventListener('click', () => {
+  const k = $('edKBPack').value;
+  const p = (window.KNOWLEDGE_PACKS || {})[k];
+  if (!p) { toast('先在下拉里选一个资料包'); return; }
+  $('edKB').value = p.text;
+  updateKbCounts();
+  toast('已载入「' + p.name + '」，记得点「保存修改」');
+});
+$('btnEdKbClear').addEventListener('click', () => {
+  $('edKB').value = '';
+  updateKbCounts();
+});
+$('btnEdKbImport').addEventListener('click', () => $('edKbFile').click());
+$('edKbFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $('edKB').value = (await f.text()).trim();
+  updateKbCounts();
+  toast('已导入 ' + f.name + '，记得保存');
+  e.target.value = '';
+});
+$('edKB').addEventListener('input', updateKbCounts);
+
+$('btnEdNew').addEventListener('click', () => {
+  const id = 'custom-' + Date.now().toString(36);
+  modeStore.extras.push({ id, name: '新洞察', desc: '一句话说明它做什么', prompt: NEW_PROMPT_SKELETON });
+  saveModeStore();
+  editingId = id;
+  renderModes();
+  renderEditorList();
+  $('edName').focus();
+  $('edName').select();
+  toast('已新增，改完记得保存');
+});
+
+$('btnEdReset').addEventListener('click', () => {
+  if (!modeStore.overrides[editingId]) return;
+  delete modeStore.overrides[editingId];
+  saveModeStore();
+  renderModes();
+  renderEditorList();
+  toast('已恢复默认提示词');
+});
+
+$('btnEdDelete').addEventListener('click', () => {
+  const m = findMode(editingId);
+  if (!m || !m.custom) return;
+  if (!confirm('删除「' + m.name + '」？此操作不可撤销。')) return;
+  modeStore.extras = modeStore.extras.filter(x => x.id !== editingId);
+  if (modeStore.kb) delete modeStore.kb[editingId];
+  saveModeStore();
+  editingId = null;
+  if (!findMode(currentMode)) currentMode = MODES[0].id;
+  renderModes();
+  renderEditorList();
+  toast('已删除');
+});
+
+$('btnEdExport').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(modeStore, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'jianyi-insight-modes.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('配置已导出，换设备时导入即可');
+});
+
+$('btnEdImport').addEventListener('click', () => $('edImportFile').click());
+$('edImportFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    if (j && (j.overrides || j.extras)){
+      modeStore = {
+        overrides: j.overrides || {},
+        extras: Array.isArray(j.extras) ? j.extras : [],
+        kb: j.kb || {}
+      };
+      saveModeStore();
+      editingId = null;
+      if (!findMode(currentMode)) currentMode = MODES[0].id;
+      renderModes();
+      renderEditorList();
+      toast('配置已导入');
+    } else {
+      toast('文件格式不对，需要本工具导出的 JSON');
+    }
+  } catch(err){
+    toast('导入失败：' + err.message);
+  }
+  e.target.value = '';
+});
+</script>
+</body>
+</html>
