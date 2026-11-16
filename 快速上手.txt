@@ -33,6 +33,6 @@
 
 命令行玩法（可选）
 ------------------
-  python jianyi_insight.py --list            看有哪些洞察维度
-  python jianyi_insight.py -f 笔记.csv --all  六个洞察一次跑完
-  python jianyi_insight.py --help            完整说明
+  python jianji_insight.py --list            看有哪些洞察维度
+  python jianji_insight.py -f 笔记.csv --all  六个洞察一次跑完
+  python jianji_insight.py --help            完整说明

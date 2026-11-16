@@ -10,9 +10,9 @@
 
 | 文件 | 作用 |
 |---|---|
-| `dist/jianyi-qt/jianyi-qt.exe` | **桌面版入口（PyQt6 壳）**。双击开独立窗口，自带 Chromium，无需浏览器/Node/WebView2 |
+| `dist/jianji-qt/jianji-qt.exe` | **桌面版入口（PyQt6 壳）**。双击开独立窗口，自带 Chromium，无需浏览器/Node/WebView2 |
 | `desktop_qt/main.py` | 桌面版源码（PyQt6 + QWebEngine）。`python desktop_qt/main.py` 开发模式 |
-| `jianyi_qt.spec` | PyInstaller 打包配置，重打跑 `python -m PyInstaller jianyi_qt.spec --noconfirm --clean` |
+| `jianji_qt.spec` | PyInstaller 打包配置，重打跑 `python -m PyInstaller jianji_qt.spec --noconfirm --clean` |
 | `桌面版说明.md` | 桌面版使用手册 |
 | `start.bat` | 老入口：起本地服务 + 自动开浏览器（最省事，无需装 PyQt） |
 | `server.py` | 本地服务：静态文件 + API 代理（绕过 CORS，见下方「为什么必须用它」） |
@@ -21,7 +21,7 @@
 | `knowledge/` | **专业资料包**（7 份判定表级资料，见下节「怎么喂资料」），可直接编辑 |
 | `knowledge.js` | 由 `build_knowledge.py` 从 `knowledge/*.md` 生成，供网页一键载入 |
 | `build_knowledge.py` | 改完 md 跑一次：`python build_knowledge.py` |
-| `jianyi_insight.py` | 命令行版。批量跑、跑六个、挂定时任务，不需要浏览器 |
+| `jianji_insight.py` | 命令行版。批量跑、跑六个、挂定时任务，不需要浏览器 |
 | `sample/` | 测试用的假数据，可以先拿它跑通流程 |
 
 > 直接双击 `index.html` 也能打开，但**点生成一定会报 `Failed to fetch`**——原因见文末「为什么必须用它」。别跳过。
@@ -52,10 +52,10 @@ HTML 保留格式和标签更完整，CSV 更好处理，两个都行。
 
 **方式 A：桌面版（PyQt6 壳，推荐）**
 
-双击 **`dist/jianyi-qt/jianyi-qt.exe`** → 独立窗口打开（QWebEngine 内置 Chromium，无需浏览器）→ 自动起 Python 代理并选空闲端口 → 点右上「模型设置」填接口 + Key + 模型名 → 导入文件 → 选洞察 → 生成。关窗口自动清理代理。
+双击 **`dist/jianji-qt/jianji-qt.exe`** → 独立窗口打开（QWebEngine 内置 Chromium，无需浏览器）→ 自动起 Python 代理并选空闲端口 → 点右上「模型设置」填接口 + Key + 模型名 → 导入文件 → 选洞察 → 生成。关窗口自动清理代理。
 
-整个 `dist/jianyi-qt/` 文件夹拷到别的机器即可分发（**目标机无需装 Python**：包内带 `runtime/` 嵌入式 Python，降级与 CLI 都可用）。
-重新打包：`python -m PyInstaller jianyi_qt.spec --noconfirm --clean`。
+整个 `dist/jianji-qt/` 文件夹拷到别的机器即可分发（**目标机无需装 Python**：包内带 `runtime/` 嵌入式 Python，降级与 CLI 都可用）。
+重新打包：`python -m PyInstaller jianji_qt.spec --noconfirm --clean`。
 开发模式：`python desktop_qt/main.py`（需先 `pip install PyQt6 PyQt6-WebEngine`）。
 
 **方式 B：浏览器版**
@@ -72,20 +72,20 @@ python server.py 8000
 
 ```bash
 # 看有哪些维度
-python jianyi_insight.py --list
+python jianji_insight.py --list
 
 # 跑一个：最近 90 天的默认洞察
-set JIANI_AI_KEY=你的key
-python jianyi_insight.py -f flomo.csv --mode 默认洞察
+set JIANJI_AI_KEY=你的key
+python jianji_insight.py -f flomo.csv --mode 默认洞察
 
-# 六个一次跑完，输出到 ./jianyi-insights/
-python jianyi_insight.py -f flomo.html --all
+# 六个一次跑完，输出到 ./jianji-insights/
+python jianji_insight.py -f flomo.html --all
 
 # 只打印提示词，不花 token
-python jianyi_insight.py -f flomo.csv --mode cbt --dry-run
+python jianji_insight.py -f flomo.csv --mode cbt --dry-run
 
 # 本地 Ollama，零成本
-python jianyi_insight.py -f flomo.csv --all ^
+python jianji_insight.py -f flomo.csv --all ^
   --api-base http://localhost:11434/v1/chat/completions --model qwen2.5:7b
 ```
 
@@ -105,21 +105,21 @@ python jianyi_insight.py -f flomo.csv --all ^
 ## 从仓库获取 / 源码构建
 
 ```bash
-git clone <本仓库> && cd jianyi
+git clone <本仓库> && cd jianji
 ```
 
 **网页版 / 命令行版**：零依赖（纯标准库），clone 完直接能用：
 
 ```bash
 python server.py 8000              # 起本地服务 + 浏览器开 http://localhost:8000
-python jianyi_insight.py --list    # 命令行版
+python jianji_insight.py --list    # 命令行版
 ```
 
 **桌面版（重新打包 exe）**：
 
 ```bash
 pip install PyInstaller PyQt6 PyQt6-WebEngine
-python -m PyInstaller jianyi_qt.spec --noconfirm --clean
+python -m PyInstaller jianji_qt.spec --noconfirm --clean
 ```
 
 **内置 Python runtime（可选，目标机零安装用）**：
@@ -137,12 +137,12 @@ python -m PyInstaller jianyi_qt.spec --noconfirm --clean
 `index.html` 已经把这些手工步骤都封装好了，导入导出文件就自动切分和过滤时间段。缺点是要自己填一次 API Key。
 
 **姿势三：全自动**
-用 `jianyi_insight.py` 挂 Windows 计划任务，每月 1 号自动跑一次上个月的六维洞察，落到 `jianyi-insights/` 目录。配置参考：
+用 `jianji_insight.py` 挂 Windows 计划任务，每月 1 号自动跑一次上个月的六维洞察，落到 `jianji-insights/` 目录。配置参考：
 
 ```
 程序:   python
-参数:   jianyi_insight.py -f D:\flomo.csv --all -d 30 -o D:\insights
-起始于: D:\jianyi
+参数:   jianji_insight.py -f D:\flomo.csv --all -d 30 -o D:\insights
+起始于: D:\jianji
 ```
 
 再配合 Obsidian / 坚果云同步那个目录，相当于每月自动收到一份「自己的月度诊断」。
@@ -238,9 +238,9 @@ python -m PyInstaller jianyi_qt.spec --noconfirm --clean
 命令行版：
 
 ```bash
-python jianyi_insight.py -f flomo.csv --all              # 自动加载 knowledge/
-python jianyi_insight.py -f flomo.csv --all --no-kb      # 不带资料，对比效果
-python jianyi_insight.py -f flomo.csv --kb 我自己的资料.md  # 用自己的资料替代
+python jianji_insight.py -f flomo.csv --all              # 自动加载 knowledge/
+python jianji_insight.py -f flomo.csv --all --no-kb      # 不带资料，对比效果
+python jianji_insight.py -f flomo.csv --kb 我自己的资料.md  # 用自己的资料替代
 ```
 
 ## 提示词为什么这么写

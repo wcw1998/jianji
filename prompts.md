@@ -1,7 +1,7 @@
 # 鉴己 · 六大 AI 洞察 · 提示词库
 
 > 用法：把任意一段提示词 + 你的笔记原文，一起粘贴给任意 AI（DeepSeek / Kimi / 智谱 / ChatGPT / 本地 Ollama 均可）。
-> 想省事就用同目录的 `index.html`（自动拼装 + 直连免费模型），或用 `jianyi_insight.py` 批量跑。
+> 想省事就用同目录的 `index.html`（自动拼装 + 直连免费模型），或用 `jianji_insight.py` 批量跑。
 
 ---
 

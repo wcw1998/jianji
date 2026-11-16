@@ -7,10 +7,12 @@ runtime/
 
 # 运行产物 / 日志
 *.log
-jianyi-insights/
+jianji-insights/
 
 # Python / IDE
 __pycache__/
 *.pyc
 .idea/
 .vscode/
+# 用户本地拷贝的成品（不入库）
+桌面版/

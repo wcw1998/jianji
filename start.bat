@@ -17,7 +17,7 @@ if not defined PY (
 )
 
 echo.
-echo   Jianyi - starting local server...
+echo   Jianji - starting local server...
 echo   Keep this window open. Close it to stop.
 echo.
 start "" http://localhost:8000

@@ -9,19 +9,19 @@ OpenAI 兼容接口（智谱 / 硅基流动 / DeepSeek / Kimi / 本地 Ollama）
 
 用法：
   # 看有哪些洞察
-  python jianyi_insight.py --list
+  python jianji_insight.py --list
 
   # 跑单个洞察（默认最近 90 天）
-  python jianyi_insight.py -f flomo.csv --mode 默认洞察
+  python jianji_insight.py -f flomo.csv --mode 默认洞察
 
   # 六个洞察一次跑完
-  python jianyi_insight.py -f flomo.html --all
+  python jianji_insight.py -f flomo.html --all
 
   # 只打印拼好的 prompt，不花 token
-  python jianyi_insight.py -f flomo.csv --mode cbt --dry-run
+  python jianji_insight.py -f flomo.csv --mode cbt --dry-run
 
   # 不联网、本地模型
-  python jianyi_insight.py -f flomo.csv --all \
+  python jianji_insight.py -f flomo.csv --all \
       --api-base http://localhost:11434/v1/chat/completions --model qwen2.5:7b
 """
 
@@ -435,18 +435,18 @@ def main():
     ap = argparse.ArgumentParser(
         description="鉴己 · 笔记洞察：自建六维 AI 洞察（兼容 flomo 导出格式），任意免费模型接口驱动",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="示例：python jianyi_insight.py -f flomo.csv --all --model glm-4-flash")
+        epilog="示例：python jianji_insight.py -f flomo.csv --all --model glm-4-flash")
     ap.add_argument("-f", "--file", help="flomo 导出的 CSV / HTML / 纯文本")
     ap.add_argument("-m", "--mode", default="insight",
                     help="洞察维度：insight/value/invert/second/cbt/mbti，也可直接写中文名")
     ap.add_argument("--all", action="store_true", help="六个洞察一次跑完")
     ap.add_argument("-d", "--days", type=int, default=90, help="只分析最近 N 天（0=全部，默认 90）")
-    ap.add_argument("-o", "--out", default="", help="输出目录（默认 ./jianyi-insights）")
+    ap.add_argument("-o", "--out", default="", help="输出目录（默认 ./jianji-insights）")
     ap.add_argument("--max-chars", type=int, default=18000, help="单次送入的最大字数")
-    ap.add_argument("--api-base", default=os.environ.get("JIANI_AI_BASE",
+    ap.add_argument("--api-base", default=os.environ.get("JIANJI_AI_BASE",
                     "https://open.bigmodel.cn/api/paas/v4/chat/completions"))
-    ap.add_argument("--api-key", default=os.environ.get("JIANI_AI_KEY", ""))
-    ap.add_argument("--model", default=os.environ.get("JIANI_AI_MODEL", "glm-4-flash"))
+    ap.add_argument("--api-key", default=os.environ.get("JIANJI_AI_KEY", ""))
+    ap.add_argument("--model", default=os.environ.get("JIANJI_AI_MODEL", "glm-4-flash"))
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--dry-run", action="store_true", help="只打印 prompt，不调用模型")
     ap.add_argument("--kb", default="", help="专业资料：单个 md 文件或目录（默认自动用同目录的 knowledge/）")
@@ -499,10 +499,10 @@ def main():
             raise SystemExit(
                 "缺少 API Key。三种方式：\n"
                 "  1) --api-key sk-xxx\n"
-                "  2) 环境变量 set JIANI_AI_KEY=sk-xxx\n"
+                "  2) 环境变量 set JIANJI_AI_KEY=sk-xxx\n"
                 "  3) --dry-run 只打印 prompt，自己粘到任意 AI 里跑")
 
-    outdir = args.out or os.path.join(os.getcwd(), "jianyi-insights")
+    outdir = args.out or os.path.join(os.getcwd(), "jianji-insights")
     os.makedirs(outdir, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
 
@@ -523,7 +523,7 @@ def main():
         messages = [
             {"role": "system", "content": sys_content},
             {"role": "user", "content":
-                "以下是我的笔记，每条开头已标注编号 [n]，分析中引用证据一律使用编号：\n\n---\n%s\n---\n\n请按要求输出「%s」的分析。"
+                "以下是我的笔记，每条开头已标注编号 [n]，分析中引用证据一律使用编号，**且只能引用笔记中真实存在的编号，严禁引用不存在的编号**：\n\n---\n%s\n---\n\n请按要求输出「%s」的分析。"
                 % (notes_text, mode["name"])},
         ]
         if kb:
@@ -547,6 +547,7 @@ def main():
 
         # 引用笔记脚注：只列正文中实际引用的编号
         cited = sorted({int(x) for x in re.findall(r"\[(\d{1,3})\]", content)})
+        invalid = [n for n in cited if not (1 <= n <= len(note_items))]
         refs = []
         for n in cited:
             if 1 <= n <= len(note_items):
@@ -554,6 +555,9 @@ def main():
                 refs.append("[%d] %s" % (n, (d + " " + c) if d else c))
         if refs:
             content += "\n\n---\n\n引用笔记：\n" + "\n\n".join(refs)
+        if invalid:
+            nums = ", ".join("[%d]" % n for n in invalid)
+            content += "\n\n> ⚠️ 检测到无效引用编号：%s（超出笔记总条数 %d，这些编号未生成脚注，可能是模型编造）" % (nums, len(note_items))
 
         header = ("# %s\n\n> 生成时间：%s ｜ 笔记 %d 条（%s）｜ 模型 %s\n\n---\n\n"
                   % (mode["name"], datetime.now().strftime("%Y-%m-%d %H:%M"),

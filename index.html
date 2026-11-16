@@ -142,6 +142,7 @@
     vertical-align:super;line-height:1;user-select:none;
   }
   #out sup.cite:hover{background:#f6dfc8}
+  #out span.cite-dead{color:#c0392b;font-weight:600;border-bottom:2px dashed #c0392b;cursor:not-allowed}
   #out details.fnotes{margin:18px 0 0;border-top:1px dashed var(--line);padding-top:10px}
   #out details.fnotes summary{cursor:pointer;font-size:12px;color:var(--ink-3)}
   #out .fnote{
@@ -436,7 +437,7 @@ const MODES = [
   {
     id: 'value',
     name: '价值澄清',
-    by: '@shaonan',
+    by: '@jianji',
     desc: '从笔记里找出你真正看重的东西，从混乱回到清晰',
     prompt: `你不听一个人说自己重视什么，你看他在什么事情上不计成本地花时间、在什么事上会生气、在什么时刻反复回头写同一件事。
 
@@ -477,7 +478,7 @@ const MODES = [
   {
     id: 'second',
     name: '二阶思考',
-    by: '@shaonan',
+    by: '@jianji',
     desc: '从笔记中识别出问题，并提炼出问题之上的问题',
     prompt: `一阶思考是"我该怎么办"。二阶思考是"我为什么会问这个问题"。
 大多数反复出现的问题，都不是问题本身，是上游某个东西的投影。
@@ -560,7 +561,7 @@ let abortCtrl = null;
 let rawMarkdown = '';
 
 /* ============ 模式存储：默认 + 调优覆盖 + 自定义 ============ */
-const MKEY = 'jianyi_insight_modes_v1';
+const MKEY = 'jianji_insight_modes_v1';
 let modeStore = { overrides: {}, extras: [], kb: {} };
 try {
   const saved = JSON.parse(localStorage.getItem(MKEY) || '{}');
@@ -604,9 +605,10 @@ $('modes').addEventListener('click', e => {
 });
 
 /* ============ 设置持久化 ============ */
-const SKEY = 'jianyi_insight_cfg_v1';
-/* 旧版 localStorage key 一次性迁移（调优/模型配置不丢）；旧 key 名含 flomo 字样属历史存储键，非界面展示 */
-[['flomo_insight_modes_v1','jianyi_insight_modes_v1'],['flomo_insight_cfg_v1','jianyi_insight_cfg_v1']].forEach(([o,n]) => {
+const SKEY = 'jianji_insight_cfg_v1';
+/* 旧版 localStorage key 一次性迁移（调优/模型配置不丢）；flomo→jianyi→jianji 三级链，旧 key 名属历史存储键，非界面展示 */
+[['flomo_insight_modes_v1','jianyi_insight_modes_v1'],['flomo_insight_cfg_v1','jianyi_insight_cfg_v1'],
+ ['jianyi_insight_modes_v1','jianji_insight_modes_v1'],['jianyi_insight_cfg_v1','jianji_insight_cfg_v1']].forEach(([o,n]) => {
   if (localStorage.getItem(o) && !localStorage.getItem(n)) localStorage.setItem(n, localStorage.getItem(o));
 });
 function loadCfg(){
@@ -651,7 +653,7 @@ function proxyBase(){
   return 'http://127.0.0.1:' + PROXY_PORT;
 }
 (async () => {
-  if (window.jianyi_desktop) $('desktopTag').style.display = 'inline-block';
+  if (window.jianji_desktop) $('desktopTag').style.display = 'inline-block';
   async function ping(port){
     const r = await fetch('http://127.0.0.1:' + port + '/__proxy_ping', { cache:'no-store' });
     const j = await r.json();
@@ -1027,7 +1029,7 @@ function renderCitations(html){
   if (!currentNotes.length) return html;
   return html.replace(/\[(\d{1,3})\]/g, (all, n) => {
     const note = currentNotes[+n - 1];
-    if (!note) return all;
+    if (!note) return '<span class="cite-dead" title="此引用编号在笔记中不存在（模型可能编造）">[' + n + ']</span>';
     const tip = (note.date ? note.date + '\n' : '') + note.text.slice(0, 160);
     return '<sup class="cite" data-n="' + n + '" title="' + escapeAttr(tip) + '">' + n + '</sup>';
   });
@@ -1297,7 +1299,7 @@ $('btnEdExport').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(modeStore, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'jianyi-insight-modes.json';
+  a.download = 'jianji-insight-modes.json';
   a.click();
   URL.revokeObjectURL(a.href);
   toast('配置已导出，换设备时导入即可');

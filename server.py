@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-jianyi 本地服务：静态文件 + API 代理
+jianji 本地服务：静态文件 + API 代理
 
 为什么需要它：
   智谱 / DeepSeek 等接口不返回 Access-Control-Allow-Origin，
@@ -32,11 +32,11 @@ TIMEOUT = 300
 
 class Handler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "jianyi/1.0"
+    server_version = "jianji/1.0"
 
     def __init__(self, *a, **kw):
         # ROOT 可被 app.py 在打包场景下改写（指向 exe 旁的资源目录）
-        root = os.environ.get("JIANI_ROOT") or ROOT
+        root = os.environ.get("JIANJI_ROOT") or ROOT
         super().__init__(*a, directory=root, **kw)
 
     # 安静日志：只打静态请求，代理请求不打（避免刷屏）。

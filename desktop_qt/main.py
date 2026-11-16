@@ -76,7 +76,7 @@ class Proxy:
                 pass
 
         # 方案 A：直接 import server（PyInstaller 把它打进 _internal）
-        os.environ["JIANI_ROOT"] = ROOT
+        os.environ["JIANJI_ROOT"] = ROOT
         try:
             import server as srv_mod
             self.srv = srv_mod.create_server(self.port)
@@ -124,7 +124,7 @@ class Proxy:
                 p = subprocess.Popen(
                     [pyexe, server_py, str(self.port)],
                     cwd=ROOT,
-                    env={**os.environ, "JIANI_ROOT": ROOT},
+                    env={**os.environ, "JIANJI_ROOT": ROOT},
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
@@ -213,10 +213,10 @@ def main():
     from PyQt6.QtGui import QIcon
 
     # Qt 需要 argv[0]（程序名），不能传空列表
-    argv = [sys.argv[0]] if sys.argv else ["jianyi-qt"]
+    argv = [sys.argv[0]] if sys.argv else ["jianji-qt"]
     app = QApplication(argv)
     app.setApplicationName("鉴己 · 笔记洞察")
-    _ico = os.path.join(ROOT, "jianyi.ico")
+    _ico = os.path.join(ROOT, "jianji.ico")
     if os.path.exists(_ico):
         app.setWindowIcon(QIcon(_ico))
 

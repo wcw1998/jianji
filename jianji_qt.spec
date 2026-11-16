@@ -1,6 +1,6 @@
 # 鉴己 · 笔记洞察 · 桌面版（PyQt6）打包配置
-# 用法：python -m PyInstaller jianyi_qt.spec --noconfirm --clean
-# 产物：dist/jianyi-qt/（文件夹：exe + 资源，knowledge/ 可热改）
+# 用法：python -m PyInstaller jianji_qt.spec --noconfirm --clean
+# 产物：dist/jianji-qt/（文件夹：exe + 资源，knowledge/ 可热改）
 #
 # PyQt6 + QtWebEngine 打包要点：
 #   - collect_all('PyQt6') 收全 Qt6/bin 下的 dll、plugins、QWebEngineProcess.exe、
@@ -60,9 +60,9 @@ CORE_DATAS = [
     (os.path.join(ROOT, 'knowledge.js'), '.'),
     (os.path.join(ROOT, 'prompts.md'), '.'),
     (os.path.join(ROOT, 'server.py'), '.'),
-    (os.path.join(ROOT, 'jianyi_insight.py'), '.'),
+    (os.path.join(ROOT, 'jianji_insight.py'), '.'),
     (os.path.join(ROOT, 'build_knowledge.py'), '.'),
-    (os.path.join(ROOT, 'jianyi.ico'), '.'),
+    (os.path.join(ROOT, 'jianji.ico'), '.'),
     (os.path.join(ROOT, 'knowledge'), 'knowledge'),
     (os.path.join(ROOT, 'sample'), 'sample'),
     (os.path.join(ROOT, 'README.md'), '.'),
@@ -94,12 +94,12 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='jianyi-qt',
+    name='jianji-qt',
     debug=False,
     strip=False,
     upx=False,
     console=False,  # 无控制台窗口
-    icon=os.path.join(ROOT, 'jianyi.ico'),  # 禅圆（enso+金点），见 桌面\jianyi-icons\03-ens
+    icon=os.path.join(ROOT, 'jianji.ico'),  # 禅圆（enso+金点），见 桌面\jianji-icons\03-ens
 )
 
 coll = COLLECT(
@@ -108,13 +108,13 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='jianyi-qt',
+    name='jianji-qt',
 )
 
 # 把可编辑资源从 _internal/ 搬到 exe 旁（main.py 打包模式 resource_root() 返回 exe 所在目录）
 # 这样改 knowledge/*.md 后跑 build_knowledge.py 直接替换，免重打
 import shutil
-dist_dir = os.path.join(DISTPATH, 'jianyi-qt')
+dist_dir = os.path.join(DISTPATH, 'jianji-qt')
 _internal = os.path.join(dist_dir, '_internal')
 for name in ['knowledge', 'sample']:
     src = os.path.join(_internal, name)
@@ -122,8 +122,8 @@ for name in ['knowledge', 'sample']:
     if os.path.isdir(src):
         shutil.copytree(src, dst, dirs_exist_ok=True)
         print("  -> exe 旁：", name)
-for name in ['index.html', 'knowledge.js', 'server.py', 'jianyi_insight.py',
-             'build_knowledge.py', 'jianyi.ico', 'prompts.md', 'README.md', '快速上手.txt', '桌面版说明.md']:
+for name in ['index.html', 'knowledge.js', 'server.py', 'jianji_insight.py',
+             'build_knowledge.py', 'jianji.ico', 'prompts.md', 'README.md', '快速上手.txt', '桌面版说明.md']:
     src = os.path.join(_internal, name)
     dst = os.path.join(dist_dir, name)
     if os.path.exists(src):
