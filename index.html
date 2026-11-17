@@ -417,7 +417,7 @@ const MODES = [
   {
     id: 'insight',
     name: '默认洞察',
-    by: '鉴己',
+    by: '@jianji',
     desc: '挖掘笔记背后隐藏的思维模式与深层内在矛盾',
     prompt: `你是一个擅长从碎片笔记里读出"写字的人"的观察者。你读的不是内容，是习惯、停顿和反复。
 
@@ -458,7 +458,7 @@ const MODES = [
   {
     id: 'invert',
     name: '逆向思考',
-    by: '鉴己',
+    by: '@jianji',
     desc: '通过芒格的逆向思维来考察笔记中的关键目标',
     prompt: `芒格的逆向思维：不要问"怎么才能成功"，要问"什么会让我彻底失败，然后避开它"。大多数人死于愚蠢，不是死于不够聪明。
 
@@ -500,7 +500,7 @@ const MODES = [
   {
     id: 'cbt',
     name: 'CBT 疗法',
-    by: '鉴己',
+    by: '@jianji',
     desc: '识别笔记中的思维陷阱并提供具体的改善建议',
     prompt: `你熟悉认知行为疗法（CBT）里的认知扭曲类型：非黑即白、过度概括、心理过滤、否定正面、读心术、灾难化、情绪化推理、应该式陈述、贴标签、个人化、比较思维。
 
@@ -520,7 +520,7 @@ const MODES = [
   {
     id: 'mbti',
     name: 'MBTI 分析',
-    by: '鉴己',
+    by: '@jianji',
     desc: '从你的笔记内容中解读真实的 MBTI 人格类型',
     prompt: `MBTI 的价值不在四个字母，在于它描述了你获取信息和做决定时的默认路径。
 不要从"我以为我是什么型"出发，从笔记里的判断方式推断。
@@ -642,7 +642,10 @@ $('provider').addEventListener('change', () => {
   if (p.model) $('model').value = p.model;
   saveCfg();
 });
-['apiBase','model','apiKey','maxChars','temp'].forEach(id => $(id).addEventListener('change', saveCfg));
+/* 用 input 而不是 change：change 要等失焦才触发，输完直接关窗（尤其桌面版 Alt+F4）会丢配置 */
+['apiBase','model','apiKey','maxChars','temp'].forEach(id => $(id).addEventListener('input', saveCfg));
+/* 关窗兜底：即使没触发 input 也能存下 */
+window.addEventListener('beforeunload', saveCfg);
 loadCfg();
 
 /* ============ 检测本地代理（server.py / app.py / main.py） ============ */
@@ -654,7 +657,7 @@ function proxyBase(){
   return 'http://127.0.0.1:' + PROXY_PORT;
 }
 (async () => {
-  if (window.jianji_desktop) $('desktopTag').style.display = 'inline-block';
+  if (window.jianji_desktop || /[?&]desktop=1\b/.test(location.search)) $('desktopTag').style.display = 'inline-block';
   async function ping(port){
     const r = await fetch('http://127.0.0.1:' + port + '/__proxy_ping', { cache:'no-store' });
     const j = await r.json();
@@ -848,8 +851,8 @@ $('btnCopyPrompt').addEventListener('click', async () => {
   if (!msgs) { toast('先贴点笔记进来'); return; }
   const m = findMode(currentMode);
   const txt = `【系统指令】\n${msgs[0].content}\n\n【我的笔记】\n${elNotes.value.trim()}\n\n请输出「${m.name}」分析。`;
-  await copy(txt);
-  toast('提示词已复制，粘到任意 AI 里就能跑');
+  if (await copy(txt)) toast('提示词已复制，粘到任意 AI 里就能跑');
+  else toast('复制失败，请手动选中复制');
 });
 
 /* ============ 运行 ============ */
@@ -861,6 +864,7 @@ const RETRY_SRC = '你刚才的输出中引用了不存在的编号：%s。本�
 const REWRITE_HINT = '检测到无效引用，自动重写…';
 
 async function run(){
+  saveCfg();   // 点生成即落盘：万一关窗前没触发过 input，也不会丢配置
   const msgs = buildMessages();
   if (!msgs) { toast('先贴点笔记进来'); return; }
 
@@ -1156,8 +1160,8 @@ function copyText(){
 }
 $('btnCopy').addEventListener('click', async () => {
   if (!rawMarkdown) { toast('还没有结果'); return; }
-  await copy(copyText());
-  toast('结果已复制（含引用笔记清单）');
+  if (await copy(copyText())) toast('结果已复制（含引用笔记清单）');
+  else toast('复制失败，请手动选中复制');
 });
 $('btnClear').addEventListener('click', () => {
   elNotes.value = ''; parsedMemos = []; rawMarkdown = '';
@@ -1165,12 +1169,25 @@ $('btnClear').addEventListener('click', () => {
   elState.textContent = ''; updateCount();
 });
 async function copy(t){
-  try { await navigator.clipboard.writeText(t); }
-  catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = t; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); ta.remove();
-  }
+  // 路径1：现代异步剪贴板（桌面版 QtWebEngine 可能因权限/focus 拒绝，失败掉到兜底）
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(t);
+      return true;
+    }
+  } catch(e) { /* 走兜底 */ }
+  // 路径2：textarea 兜底——必须先 focus 再 select，且检查 execCommand 返回值
+  //        （execCommand 失败是返回 false、不抛异常，不检查就会假装成功）
+  const ta = document.createElement('textarea');
+  ta.value = t;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';   // 不干扰布局、不引起滚动
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+  ta.remove();
+  return ok;
 }
 let toastTimer;
 function toast(msg){
