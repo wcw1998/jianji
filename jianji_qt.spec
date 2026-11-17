@@ -66,7 +66,6 @@ CORE_DATAS = [
     (os.path.join(ROOT, 'knowledge'), 'knowledge'),
     (os.path.join(ROOT, 'sample'), 'sample'),
     (os.path.join(ROOT, 'README.md'), '.'),
-    (os.path.join(ROOT, '快速上手.txt'), '.'),
     (os.path.join(ROOT, '桌面版说明.md'), '.'),
 ]
 
@@ -123,7 +122,7 @@ for name in ['knowledge', 'sample']:
         shutil.copytree(src, dst, dirs_exist_ok=True)
         print("  -> exe 旁：", name)
 for name in ['index.html', 'knowledge.js', 'server.py', 'jianji_insight.py',
-             'build_knowledge.py', 'jianji.ico', 'prompts.md', 'README.md', '快速上手.txt', '桌面版说明.md']:
+             'build_knowledge.py', 'jianji.ico', 'prompts.md', 'README.md', '桌面版说明.md']:
     src = os.path.join(_internal, name)
     dst = os.path.join(dist_dir, name)
     if os.path.exists(src):
