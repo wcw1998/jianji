@@ -856,6 +856,10 @@ $('btnCopyPrompt').addEventListener('click', async () => {
 $('btnRun').addEventListener('click', run);
 $('btnStop').addEventListener('click', () => { if (abortCtrl) abortCtrl.abort(); });
 
+/* 第二档素材：重写指令与 CLI jianji_insight.py 逐字一致（双端行为对齐），改一处就要改两处 */
+const RETRY_SRC = '你刚才的输出中引用了不存在的编号：%s。本次笔记共 %d 条，有效编号范围 [1]~[%d]。请删除或替换这些无效引用（没有证据就写「线索不足」），重新输出完整分析。';
+const REWRITE_HINT = '检测到无效引用，自动重写…';
+
 async function run(){
   const msgs = buildMessages();
   if (!msgs) { toast('先贴点笔记进来'); return; }
@@ -933,6 +937,55 @@ async function run(){
       }
       render(rawMarkdown);
     }
+
+    // 第二档：检测到无效引用 → 带纠正指令自动重写一次（最多一次；失败保留首份输出）
+    const inv2 = findInvalidCites(rawMarkdown);
+    if (inv2.length){
+      const nums2 = '[' + inv2.join('], [') + ']';
+      const msg2 = RETRY_SRC.split('%d').join(String(currentNotes.length)).replace('%s', nums2);
+      const msgs2 = msgs.concat([
+        { role:'assistant', content: rawMarkdown },
+        { role:'user', content: msg2 }
+      ]);
+      const firstMarkdown = rawMarkdown;
+      rawMarkdown = '';
+      elOut.innerHTML = '<p class="placeholder">' + escapeHtml(REWRITE_HINT) + '<span class="cursor"></span></p>';
+      try {
+        const res2 = await fetch(url, { method:'POST', headers, signal: abortCtrl.signal,
+          body: JSON.stringify({ model, messages: msgs2, temperature: +$('temp').value || 0.7, stream: true }) });
+        if (res2.ok){
+          if (!res2.body || !res2.headers.get('content-type')?.includes('event-stream')){
+            const j2 = await res2.json();
+            rawMarkdown = j2.choices?.[0]?.message?.content || '';
+          } else {
+            const rd2 = res2.body.getReader();
+            const dc2 = new TextDecoder();
+            let bf2 = '';
+            while (true){
+              const { done, value } = await rd2.read();
+              if (done) break;
+              bf2 += dc2.decode(value, { stream:true });
+              const ln2 = bf2.split('\n');
+              bf2 = ln2.pop() || '';
+              for (const l2 of ln2){
+                const s2 = l2.trim();
+                if (!s2.startsWith('data:')) continue;
+                const d2 = s2.slice(5).trim();
+                if (d2 === '[DONE]') continue;
+                try {
+                  const j2 = JSON.parse(d2);
+                  const dl2 = j2.choices?.[0]?.delta?.content || '';
+                  if (dl2){ rawMarkdown += dl2; render(rawMarkdown, true); }
+                } catch(e2){}
+              }
+            }
+          }
+        }
+      } catch(e2){ /* 重试失败不打断，回退首份输出 */ }
+      if (!rawMarkdown) rawMarkdown = firstMarkdown;
+      render(rawMarkdown);
+    }
+
     elState.textContent = '完成 · ' + ((Date.now()-t0)/1000).toFixed(1) + 's';
   } catch(err){
     if (err.name === 'AbortError'){

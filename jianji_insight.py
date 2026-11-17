@@ -447,6 +447,8 @@ def main():
                     "https://open.bigmodel.cn/api/paas/v4/chat/completions"))
     ap.add_argument("--api-key", default=os.environ.get("JIANJI_AI_KEY", ""))
     ap.add_argument("--model", default=os.environ.get("JIANJI_AI_MODEL", "glm-4-flash"))
+    ap.add_argument("--no-verify", action="store_true",
+                    help="关闭无效引用的自动重写（第二档）与标记（第三档）")
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--dry-run", action="store_true", help="只打印 prompt，不调用模型")
     ap.add_argument("--kb", default="", help="专业资料：单个 md 文件或目录（默认自动用同目录的 knowledge/）")
@@ -520,11 +522,12 @@ def main():
                             "不要引用资料中没有的术语】\n" + kb)
         sys_content += "\n" + mode["prompt"]
 
+        n_notes = len(note_items)
         messages = [
             {"role": "system", "content": sys_content},
             {"role": "user", "content":
-                "以下是我的笔记，每条开头已标注编号 [n]，分析中引用证据一律使用编号，**且只能引用笔记中真实存在的编号，严禁引用不存在的编号**：\n\n---\n%s\n---\n\n请按要求输出「%s」的分析。"
-                % (notes_text, mode["name"])},
+                "以下是我的笔记（共 %d 条），每条开头已标注编号 [n]，分析中引用证据一律使用编号，**只能使用 [1]~[%d] 范围内的编号，严禁引用超出该范围的编号，没有证据就写「线索不足」不要编造引用**：\n\n---\n%s\n---\n\n请按要求输出「%s」的分析。"
+                % (n_notes, n_notes, notes_text, mode["name"])},
         ]
         if kb:
             print("   「%s」附带资料 %d 字" % (mode["name"], len(kb)))
@@ -542,6 +545,23 @@ def main():
         t0 = datetime.now()
         content = call_model(args.api_base, args.api_key, args.model,
                              messages, args.temperature)
+        # 第二档：检测到无效引用 → 带错误信息自动重写一次（--no-verify 关闭）
+        if not args.no_verify:
+            def _invalids(text):
+                found = [int(x) for x in re.findall(r"\[(\d{1,3})\]", text)]
+                return sorted({n for n in found if not (1 <= n <= n_notes)})
+            invalids = _invalids(content)
+            if invalids:
+                print(" 检测到无效引用 %s，自动重写一次... " %
+                      ", ".join("[%d]" % n for n in invalids), end="", flush=True)
+                messages = messages + [
+                    {"role": "assistant", "content": content},
+                    {"role": "user", "content":
+                        "你刚才的输出中引用了不存在的编号：%s。本次笔记共 %d 条，有效编号范围 [1]~[%d]。"
+                        "请删除或替换这些无效引用（没有证据就写「线索不足」），重新输出完整分析。"
+                        % (", ".join("[%d]" % n for n in invalids), n_notes, n_notes)}]
+                content = call_model(args.api_base, args.api_key, args.model,
+                                     messages, args.temperature)
         cost = (datetime.now() - t0).total_seconds()
         print(" 完成 %.1fs" % cost)
 
@@ -555,7 +575,11 @@ def main():
                 refs.append("[%d] %s" % (n, (d + " " + c) if d else c))
         if refs:
             content += "\n\n---\n\n引用笔记：\n" + "\n\n".join(refs)
-        if invalid:
+        # 第三档：确定性兜底——正文里仍越界的编号显式标记（不依赖模型自觉）
+        if invalid and not args.no_verify:
+            for n in invalid:
+                content = content.replace("[%d]" % n, "[%d]（无效引用）" % n)
+        if invalid and not args.no_verify:
             nums = ", ".join("[%d]" % n for n in invalid)
             content += "\n\n> ⚠️ 检测到无效引用编号：%s（超出笔记总条数 %d，这些编号未生成脚注，可能是模型编造）" % (nums, len(note_items))
 
