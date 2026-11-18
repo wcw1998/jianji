@@ -20,6 +20,7 @@
 """
 
 import argparse
+import json
 import os
 import sys
 import threading
@@ -38,6 +39,9 @@ def resource_root():
 
 ROOT = resource_root()
 INDEX = os.path.join(ROOT, "index.html")
+# 配置持久化文件：QtWebEngine 的 localStorage 跨重启不落盘（实测 _profile 从不
+# 生成、重启读回 None），所以桌面版把模型配置存到自己的 JSON 文件，启动时注回页面。
+CONFIG_PATH = os.path.join(ROOT, "jianji-config.json")
 # 让 import server 能找到项目根的 server.py
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -209,6 +213,7 @@ def main():
 
     from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
     from PyQt6.QtWebEngineWidgets import QWebEngineView
+    from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
     from PyQt6.QtCore import QUrl, QTimer
     from PyQt6.QtGui import QIcon
 
@@ -234,18 +239,20 @@ def main():
         win.setWindowIcon(QIcon(_ico))
     win.resize(args.width, args.height)
 
+    # ---- 持久化 profile：不设这条，QWebEngine 默认 off-the-record（内存），
+    #      localStorage 根本不落盘，重启就丢（表现为「API Key 不保存」）。
+    #      指到 exe 旁的 _profile/，Key / 提示词调优都能跨重启保留。----
+    profile = QWebEngineProfile.defaultProfile()
+    profile.setPersistentStoragePath(os.path.join(ROOT, "_profile"))
+    profile.setPersistentCookiesPolicy(
+        QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+
     view = QWebEngineView()
     win.setCentralWidget(view)
 
-    # 用 http:// 同源加载（代理已在 proxy.start() 里等 ping 通，确保就绪）。
-    # 之前 file:// 在部分环境 load ok=False（Chromium file 访问限制），http 最稳。
-    if not args.no_proxy:
-        url = "http://127.0.0.1:%d/index.html" % proxy.port
-    else:
-        url = "file://" + INDEX.replace(os.sep, "/")
-
-    # 诊断：监听页面加载，写到日志文件（黑屏时排查看）
-    page = view.page()
+    # ---- 诊断：捕获页面 JS console（error/warn/info/log），落进 qt_debug.log。
+    #      桌面版是窗口程序、没有 devtools，JS 报错平时全被吞掉——这是之前
+    #      复制/Key bug 一直修不准的根因。现在把真实报错露出来。----
     log_path = os.path.join(ROOT, "qt_debug.log")
     def _plog(msg):
         try:
@@ -253,6 +260,126 @@ def main():
                 f.write("%s %s\n" % (time.strftime("%H:%M:%S"), msg))
         except Exception:
             pass
+
+    class _DiagPage(QWebEnginePage):
+        def javaScriptConsoleMessage(self, level, message, line, source):
+            # level 是 QtWebEngineCore.JavaScriptConsoleMessageLevel 枚举，
+            # 不能 int() 强转（会 TypeError 崩掉整个 Qt 回调）。按枚举名归类。
+            try:
+                tag = {
+                    "Info": "js-info",
+                    "Warning": "js-warn",
+                    "Error": "js-error",
+                }.get(level.name, "js")
+            except Exception:
+                tag = "js"
+            try:
+                _plog("[%s] %s (%s:%s)" % (tag, message, source, line))
+            except Exception:
+                pass
+            try:
+                super().javaScriptConsoleMessage(level, message, line, source)
+            except Exception:
+                pass
+
+    _page = _DiagPage(profile, view)
+    view.setPage(_page)
+    page = _page
+
+    # ---- 剪贴板轮询桥：网页 copy() 检测到 ?desktop=1 时，把文本存进
+    #      window.__jianjiCopy（不跳转、不依赖文档焦点）。这里用 QTimer 每 120ms
+    #      runJavaScript 读回该变量，非空就 QApplication.clipboard() 原生写、再清空。
+    #      Windows 下 OpenClipboard 偶发被其它进程短暂锁住（COM 0x800401d0），
+    #      所以写入失败时用 QTimer 退避重试，拿到锁为止。----
+    _last_copy = {"v": None}
+    def _write_clipboard_with_retry(text, attempt=0):
+        try:
+            QApplication.clipboard().setText(text)
+            # 验证真的写进去了（Windows 锁竞争时 setText 会静默失败）
+            if QApplication.clipboard().text() == text:
+                _plog("[copy] 原生写剪贴板成功, 长度=%d" % len(text))
+                return
+            raise RuntimeError("写入后读回不一致（剪贴板被锁）")
+        except Exception as e:
+            if attempt < 6:
+                QTimer.singleShot(60 * (attempt + 1),
+                                  lambda: _write_clipboard_with_retry(text, attempt + 1))
+            else:
+                _plog("[copy] 原生写剪贴板失败(已重试): %s" % e)
+
+    def _poll_clipboard():
+        def _got(v):
+            if v is None or v == "":
+                return
+            if v == _last_copy["v"]:
+                return  # 同一段文本只写一次，避免反复覆盖系统剪贴板
+            _last_copy["v"] = v
+            _write_clipboard_with_retry(str(v))
+        try:
+            page.runJavaScript(
+                "(window.__jianjiCopy==null?'':String(window.__jianjiCopy))", _got)
+        except Exception:
+            pass
+    _clip_timer = QTimer()
+    _clip_timer.timeout.connect(_poll_clipboard)
+    _clip_timer.start(120)
+
+    # ---- 配置持久化桥：QtWebEngine 的 localStorage 跨重启不落盘（实测 _profile
+    #      从不生成、重启读回 None），所以模型配置改存桌面壳自己的 JSON 文件。
+    #      网页 saveCfg() 除写 localStorage 外，把配置 JSON 推到 window.__jianjiCfg；
+    #      这里轮询读回，变化就写 CONFIG_PATH。启动时 _restore_config() 再注回页面。----
+    _last_cfg = {"v": None}
+    def _restore_config():
+        """启动后把上次保存的配置注回页面 localStorage 并刷新 UI。"""
+        if not os.path.exists(CONFIG_PATH):
+            _plog("[cfg] 无配置文件，跳过恢复 %s" % CONFIG_PATH)
+            return
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                raw = f.read()
+            # 校验是合法 JSON 再注入，避免坏文件搞坏页面
+            json.loads(raw)
+        except Exception as e:
+            _plog("[cfg] 配置文件读取/解析失败: %s" % e)
+            return
+        js = (
+            "(function(){try{localStorage.setItem('jianji_insight_cfg_v1', %s);"
+            "if(typeof loadCfg==='function') loadCfg();"
+            "return 'ok';}catch(e){return 'ERR:'+e;}})()" % json.dumps(raw)
+        )
+        page.runJavaScript(js, lambda v: _plog("[cfg] 启动恢复配置=%s" % v))
+        _last_cfg["v"] = raw  # 恢复的值视为已保存，避免轮询立刻重复写
+
+    def _poll_config():
+        def _got(v):
+            if v is None or v == "" or v == "{}":
+                return
+            if v == _last_cfg["v"]:
+                return  # 没变化不重复写盘
+            _last_cfg["v"] = v
+            try:
+                with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                    f.write(v)
+                _plog("[cfg] 配置已保存到文件, 长度=%d" % len(v))
+            except Exception as e:
+                _plog("[cfg] 配置写文件失败: %s" % e)
+        try:
+            page.runJavaScript(
+                "(window.__jianjiCfg==null?'':String(window.__jianjiCfg))", _got)
+        except Exception:
+            pass
+    _cfg_timer = QTimer()
+    _cfg_timer.timeout.connect(_poll_config)
+    _cfg_timer.start(300)
+    _plog("=== 启动，profile 持久化路径=%s ===" % profile.persistentStoragePath())
+
+    # 用 http:// 同源加载（代理已在 proxy.start() 里等 ping 通，确保就绪）。
+    # 之前 file:// 在部分环境 load ok=False（Chromium file 访问限制），http 最稳。
+    # 带 ?desktop=1：让页面识别桌面环境，copy() 走原生剪贴板桥。
+    if not args.no_proxy:
+        url = "http://127.0.0.1:%d/index.html?desktop=1" % proxy.port
+    else:
+        url = "file://" + INDEX.replace(os.sep, "/")
     _plog("load url=%s" % url)
 
     _retries = {"n": 0}
@@ -267,6 +394,10 @@ def main():
             _retries["n"] += 1
             _plog("retry load #%d" % _retries["n"])
             QTimer.singleShot(2000, lambda: view.load(QUrl(url)))
+        # ---- 配置持久化：QtWebEngine 的 localStorage 跨重启不落盘（实测 _profile
+        #      从不生成、重启读回 None），所以改由桌面壳把配置存到自己的 JSON 文件。
+        #      启动后把上次保存的配置注入回页面并刷新 UI。----
+        _restore_config()
     page.loadFinished.connect(on_load_done)
 
     view.load(QUrl(url))

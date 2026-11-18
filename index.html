@@ -626,7 +626,7 @@ function loadCfg(){
   updateKbCounts();
 }
 function saveCfg(){
-  localStorage.setItem(SKEY, JSON.stringify({
+  const cfg = JSON.stringify({
     provider: $('provider').value,
     apiBase: $('apiBase').value.trim(),
     model: $('model').value.trim(),
@@ -634,7 +634,12 @@ function saveCfg(){
     maxChars: +$('maxChars').value || 18000,
     temp: +$('temp').value || 0.7,
     kbGlobal: $('kbGlobal').value
-  }));
+  });
+  localStorage.setItem(SKEY, cfg);
+  // 桌面版：QtWebEngine 的 localStorage 跨重启不落盘，所以把配置推到
+  // window.__jianjiCfg，由桌面壳轮询读回、写进自己的 JSON 文件（启动时再注回）。
+  // 浏览器版桌面壳不存在，这行只是设个全局变量，无副作用。
+  window.__jianjiCfg = cfg;
 }
 $('provider').addEventListener('change', () => {
   const p = PRESETS[$('provider').value];
@@ -1169,7 +1174,21 @@ $('btnClear').addEventListener('click', () => {
   elState.textContent = ''; updateCount();
 });
 async function copy(t){
-  // 路径1：现代异步剪贴板（桌面版 QtWebEngine 可能因权限/focus 拒绝，失败掉到兜底）
+  // 路径0：桌面版原生桥。QtWebEngine 限制网页层 clipboard（navigator.clipboard 报
+  //        "Document is not focused"、execCommand 返回 false），所以在桌面壳里把文本
+  //        存到 window.__jianjiCopy，由桌面壳的 QTimer 轮询读回、用 Qt 原生写剪贴板。
+  //        不依赖文档焦点、不跳转页面。桌面壳加载时带 ?desktop=1 标记；
+  //        浏览器版无此标记，走下面原逻辑，零影响。
+  if (window.jianji_desktop || /[?&]desktop=1\b/.test(location.search)) {
+    try {
+      window.__jianjiCopy = (t == null ? '' : String(t));
+      return true;
+    } catch(e) {
+      console.error('[copy] 原生桥写入失败: ' + (e && e.message ? e.message : e));
+      return false;
+    }
+  }
+  // 路径1：现代异步剪贴板（浏览器版）
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(t);

@@ -9,6 +9,10 @@ runtime/
 *.log
 jianji-insights/
 
+# 桌面版运行时产物：模型配置（含用户 API Key，绝不入库）、QtWebEngine profile
+jianji-config.json
+_profile/
+
 # Python / IDE
 __pycache__/
 *.pyc
